@@ -1,1 +1,5 @@
 oh-my-ag/
+
+# Serena Memory
+.serena/memories/*
+!.serena/memories/.gitkeep
