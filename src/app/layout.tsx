@@ -20,6 +20,10 @@ export const metadata: Metadata = {
     default: 'Tanzania Sharing Association | US Diaspora Mutual-Aid Society',
     template: '%s | TSA'
   },
+  icons: {
+    icon: '/TSA_Logo-removebg-preview.png',
+    apple: '/TSA_Logo-removebg-preview.png',
+  },
   description: 'The Tanzania Sharing Association (TSA) is a US-wide diaspora mutual-aid society uniting Tanzanians across America through community support, cultural preservation, and shared prosperity.',
   keywords: ['Tanzania Sharing Association', 'TSA', 'Tanzanian Diaspora', 'US Tanzanians', 'Mutual Aid Society', 'Tanzanian American', 'Community Support'],
   authors: [{ name: 'Tanzania Sharing Association' }],

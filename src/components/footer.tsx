@@ -98,7 +98,11 @@ export function Footer() {
                 </div>
                 <div>
                   <p className="font-bold text-background">{t.email.title}</p>
-                  <p className="mt-1 text-background/70">info@tansha.org</p>
+                  <p className="mt-1 text-background/70">
+                    <a href="mailto:tansha.hq@gmail.com" className="hover:text-primary transition-colors">
+                      tansha.hq@gmail.com
+                    </a>
+                  </p>
                 </div>
               </div>
 
@@ -249,7 +253,15 @@ export function Footer() {
         {/* Bottom bar */}
         <div className="mt-12 flex flex-col items-center justify-between gap-6 border-t border-background/10 pt-8 sm:flex-row">
           <p className="text-xs text-background/60">
-            &copy; {new Date().getFullYear()} {t.copyright}
+            &copy; {new Date().getFullYear()} {t.copyright} • 
+            <a 
+              href="https://github.com/yakubmungai" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="ml-1 text-background/40 hover:text-primary transition-colors"
+            >
+              Developed by Jacob Mungai
+            </a>
           </p>
           <div className="flex gap-6 text-xs text-background/60">
             <a href="#" onClick={(e) => handleComingSoon(e, t.privacy)} className="hover:text-primary transition-colors">{t.privacy}</a>
