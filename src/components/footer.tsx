@@ -5,18 +5,46 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Mail, Phone, MapPin, DollarSign, Smartphone } from "lucide-react"
+import { Mail, Phone, MapPin, DollarSign, Smartphone, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useLanguage } from "@/components/language-context"
+import { submitContactMessage } from "@/features/contact/actions"
+import { translations } from "@/lib/translations"
 
 export function Footer() {
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
-
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setSubmitted(true)
-  }
-
+  const { language } = useLanguage()
   const { toast } = useToast()
+  const t = translations[language].footer
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      const formData = new FormData(e.currentTarget)
+      const result = await submitContactMessage(formData)
+
+      if (result.success) {
+        setSubmitted(true)
+        toast({
+          title: language === "en" ? "Message Sent" : "Ujumbe Umetumwa",
+          description: t.contact.successText,
+        })
+      } else {
+        throw new Error(result.error)
+      }
+    } catch (error) {
+      toast({
+        title: language === "en" ? "Error" : "Hitilafu",
+        description: language === "en" ? "Failed to send message. Please try again later." : "Imeshindikana kutuma ujumbe. Tafadhali jaribu tena baadaye.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   const handleComingSoon = (e: React.MouseEvent<HTMLAnchorElement>, feature: string) => {
     e.preventDefault()
@@ -36,20 +64,19 @@ export function Footer() {
               <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-primary/20 p-1">
                 <img
                   src="/images/tsa-logo-white.png"
-                  alt="Tanzania Sharing Association Logo"
+                  alt="TSA Logo"
                   className="h-full w-full rounded-full object-cover"
                 />
               </div>
               <div className="space-y-0.5">
                 <h3 className="font-serif text-lg font-bold leading-none text-background">
-                  Tanzania Sharing Association
+                  {translations[language].common.orgFullName}
                 </h3>
               </div>
             </div>
 
             <p className="max-w-md text-sm leading-relaxed text-background/80">
-              Empowering Tanzanians in the diaspora through solidarity, mutual
-              aid, and cultural preservation. Together, we are stronger.
+              {t.description}
             </p>
 
             <div className="flex flex-col gap-6 text-xs text-background/80">
@@ -58,11 +85,9 @@ export function Footer() {
                   <MapPin className="h-4 w-4" />
                 </div>
                 <div>
-                  <p className="font-bold text-background">Location</p>
+                  <p className="font-bold text-background">{t.location.title}</p>
                   <p className="mt-1 text-background/70 leading-relaxed">
-                    Serving the greater Dallas-Fort Worth, Houston,
-                    <br />
-                    Austin, and San Antonio areas
+                    {t.location.text}
                   </p>
                 </div>
               </div>
@@ -72,8 +97,8 @@ export function Footer() {
                   <Mail className="h-4 w-4" />
                 </div>
                 <div>
-                  <p className="font-bold text-background">Email</p>
-                  <p className="mt-1 text-background/70">info@tsatexas.org</p>
+                  <p className="font-bold text-background">{t.email.title}</p>
+                  <p className="mt-1 text-background/70">info@tansha.org</p>
                 </div>
               </div>
 
@@ -82,7 +107,7 @@ export function Footer() {
                   <Phone className="h-4 w-4" />
                 </div>
                 <div>
-                  <p className="font-bold text-background">Phone</p>
+                  <p className="font-bold text-background">{t.phone.title}</p>
                   <p className="mt-1 text-background/70">(469) 555-0192</p>
                 </div>
               </div>
@@ -92,7 +117,7 @@ export function Footer() {
           {/* Column 2: Contributions */}
           <div className="flex flex-col gap-5">
             <h3 className="font-semibold text-lg text-primary">
-              Send Contributions
+              {t.contributions.title}
             </h3>
 
             <div className="flex flex-col gap-3">
@@ -103,9 +128,9 @@ export function Footer() {
                     <DollarSign className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="font-bold text-sm text-background">Zelle</p>
+                    <p className="font-bold text-sm text-background">{t.contributions.zelle}</p>
                     <p className="mt-1 text-xs text-background/70 font-mono">
-                      treasurer@tsatexas.org
+                      treasurer@tansha.org
                     </p>
                   </div>
                 </div>
@@ -118,7 +143,7 @@ export function Footer() {
                     <Smartphone className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="font-bold text-sm text-background">CashApp</p>
+                    <p className="font-bold text-sm text-background">{t.contributions.cashapp}</p>
                     <p className="mt-1 text-xs text-background/70 font-mono">
                       $TSATexas
                     </p>
@@ -131,7 +156,7 @@ export function Footer() {
           {/* Column 3: Contact Form */}
           <div className="flex flex-col gap-5">
             <h3 className="font-semibold text-lg text-primary">
-              Contact Us
+              {t.contact.title}
             </h3>
 
             <div className="rounded-2xl border border-background/10 bg-background/5 p-4">
@@ -140,33 +165,39 @@ export function Footer() {
                   <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/20 text-primary">
                     <Mail className="h-7 w-7" />
                   </div>
-                  <h4 className="mt-4 text-lg font-bold text-background">Message Sent!</h4>
+                  <h4 className="mt-4 text-lg font-bold text-background">{t.contact.success}</h4>
                   <p className="mt-2 text-sm text-background/70">
-                    We'll get back to you shortly.
+                    {t.contact.successText}
                   </p>
                   <Button
                     variant="link"
                     onClick={() => setSubmitted(false)}
                     className="mt-4 text-primary hover:text-primary/80"
                   >
-                    Send another message
+                    {t.contact.anotherMessage}
                   </Button>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-1.5">
-                      <Label htmlFor="firstName" className="text-xs text-background/70">First Name</Label>
+                      <Label htmlFor="firstName" className="text-xs text-background/70">
+                        {t.contact.firstName}
+                      </Label>
                       <Input
                         id="firstName"
+                        name="firstName"
                         required
                         className="h-8 border-background/20 bg-background/10 text-xs text-background placeholder:text-background/30 focus-visible:ring-primary"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="lastName" className="text-xs text-background/70">Last Name</Label>
+                      <Label htmlFor="lastName" className="text-xs text-background/70">
+                        {t.contact.lastName}
+                      </Label>
                       <Input
                         id="lastName"
+                        name="lastName"
                         required
                         className="h-8 border-background/20 bg-background/10 text-xs text-background placeholder:text-background/30 focus-visible:ring-primary"
                       />
@@ -174,9 +205,10 @@ export function Footer() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="email" className="text-xs text-background/70">Email</Label>
+                    <Label htmlFor="email" className="text-xs text-background/70">{t.contact.email}</Label>
                     <Input
                       id="email"
+                      name="email"
                       type="email"
                       required
                       className="h-8 border-background/20 bg-background/10 text-xs text-background placeholder:text-background/30 focus-visible:ring-primary"
@@ -184,9 +216,10 @@ export function Footer() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="message" className="text-xs text-background/70">Message</Label>
+                    <Label htmlFor="message" className="text-xs text-background/70">{t.contact.message}</Label>
                     <Textarea
                       id="message"
+                      name="message"
                       rows={3}
                       required
                       className="resize-none border-background/20 bg-background/10 text-xs text-background placeholder:text-background/30 focus-visible:ring-primary"
@@ -195,9 +228,17 @@ export function Footer() {
 
                   <Button
                     type="submit"
-                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                    disabled={isSubmitting}
+                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-70"
                   >
-                    Send Message
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {language === "en" ? "Sending..." : "Inatuma..."}
+                      </>
+                    ) : (
+                      t.contact.submit
+                    )}
                   </Button>
                 </form>
               )}
@@ -208,15 +249,16 @@ export function Footer() {
         {/* Bottom bar */}
         <div className="mt-12 flex flex-col items-center justify-between gap-6 border-t border-background/10 pt-8 sm:flex-row">
           <p className="text-xs text-background/60">
-            &copy; {new Date().getFullYear()} Tanzania Sharing Association. All rights reserved.
+            &copy; {new Date().getFullYear()} {t.copyright}
           </p>
           <div className="flex gap-6 text-xs text-background/60">
-            <a href="#" onClick={(e) => handleComingSoon(e, "Privacy Policy")} className="hover:text-primary transition-colors">Privacy Policy</a>
-            <a href="#" onClick={(e) => handleComingSoon(e, "Constitution")} className="hover:text-primary transition-colors">Constitution</a>
-            <a href="#" onClick={(e) => handleComingSoon(e, "Bylaws")} className="hover:text-primary transition-colors">Bylaws</a>
+            <a href="#" onClick={(e) => handleComingSoon(e, t.privacy)} className="hover:text-primary transition-colors">{t.privacy}</a>
+            <a href="/constitution" className="hover:text-primary transition-colors">{t.constitution}</a>
+            <a href="#" onClick={(e) => handleComingSoon(e, t.bylaws)} className="hover:text-primary transition-colors">{t.bylaws}</a>
           </div>
         </div>
       </div>
     </footer>
   )
 }
+

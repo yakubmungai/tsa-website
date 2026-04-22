@@ -1,75 +1,88 @@
-import { HandHeart, GraduationCap, Stethoscope, PartyPopper, Landmark, Handshake } from "lucide-react"
+"use client"
 
-const programs = [
-  {
-    icon: HandHeart,
-    title: "Bereavement Support",
-    description:
-      "Financial and emotional support for families dealing with loss, including assistance with funeral arrangements and repatriation.",
-    color: "bg-primary/10 text-primary",
-  },
-  {
-    icon: GraduationCap,
-    title: "Education Fund",
-    description:
-      "Scholarships and educational support for the children of our members, investing in the next generation of Tanzanian-American leaders.",
-    color: "bg-secondary/10 text-secondary",
-  },
-  {
-    icon: Stethoscope,
-    title: "Health & Wellness",
-    description:
-      "Support during medical emergencies and health education initiatives to keep our community healthy and informed.",
-    color: "bg-accent/20 text-accent-foreground",
-  },
-  {
-    icon: PartyPopper,
-    title: "Cultural Celebrations",
-    description:
-      "Annual events celebrating Tanzanian independence, cultural festivals, and community gatherings that honor our heritage.",
-    color: "bg-primary/10 text-primary",
-  },
-  {
-    icon: Landmark,
-    title: "Civic Engagement",
-    description:
-      "Empowering our members to participate in American civic life while maintaining strong ties to Tanzania.",
-    color: "bg-secondary/10 text-secondary",
-  },
-  {
-    icon: Handshake,
-    title: "New Arrivals Support",
-    description:
-      "Welcoming and assisting newly arrived Tanzanians with settlement, orientation, and integration into the community.",
-    color: "bg-accent/20 text-accent-foreground",
-  },
-]
+import { HandHeart, GraduationCap, Stethoscope, PartyPopper, Landmark, Handshake } from "lucide-react"
+import { useScrollReveal } from "@/hooks/use-scroll-reveal"
+import { useLanguage } from "@/components/language-context"
+import { translations } from "@/lib/translations"
 
 export function ProgramsSection() {
+  const { ref: headerRef, isVisible: headerVisible } = useScrollReveal()
+  const { ref: gridRef, isVisible: gridVisible } = useScrollReveal(0.1)
+  const { language } = useLanguage()
+  const t = translations[language].programs
+
+  const programs = [
+    {
+      icon: HandHeart,
+      title: t.list.bereavement.title,
+      description: t.list.bereavement.description,
+      color: "bg-primary/10 text-primary",
+      delay: "delay-0"
+    },
+    {
+      icon: GraduationCap,
+      title: t.list.education.title,
+      description: t.list.education.description,
+      color: "bg-secondary/10 text-secondary",
+      delay: "delay-100"
+    },
+    {
+      icon: Stethoscope,
+      title: t.list.health.title,
+      description: t.list.health.description,
+      color: "bg-accent/20 text-accent-foreground",
+      delay: "delay-200"
+    },
+    {
+      icon: PartyPopper,
+      title: t.list.cultural.title,
+      description: t.list.cultural.description,
+      color: "bg-primary/10 text-primary",
+      delay: "delay-300"
+    },
+    {
+      icon: Landmark,
+      title: t.list.civic.title,
+      description: t.list.civic.description,
+      color: "bg-secondary/10 text-secondary",
+      delay: "delay-400"
+    },
+    {
+      icon: Handshake,
+      title: t.list.newArrivals.title,
+      description: t.list.newArrivals.description,
+      color: "bg-accent/20 text-accent-foreground",
+      delay: "delay-500"
+    },
+  ]
+
   return (
-    <section id="programs" className="bg-muted py-24 md:py-32">
-      <div className="mx-auto max-w-7xl px-6">
-        <div className="mx-auto max-w-3xl text-center">
+    <section id="programs" className="relative bg-muted py-24 md:py-32 overflow-hidden">
+      {/* Subtle radial gradient background for depth */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(133,55%,40%,0.05),transparent_60%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,hsl(200,72%,55%,0.05),transparent_60%)]" />
+
+      <div className="relative mx-auto max-w-7xl px-6">
+        <div ref={headerRef} className={`mx-auto max-w-3xl text-center ${headerVisible ? "animate-fade-in-up" : "opacity-0"}`}>
           <p className="text-sm font-semibold uppercase tracking-widest text-primary">
-            Our Programs
+            {t.badge}
           </p>
           <h2 className="mt-3 text-balance font-serif text-3xl font-bold text-foreground sm:text-4xl md:text-5xl">
-            How We Support Each Other
+            {t.title}
           </h2>
           <p className="mt-6 text-lg leading-relaxed text-muted-foreground">
-            Through structured programs and collective resources, we ensure no member
-            of our community faces hardship alone.
+            {t.description}
           </p>
         </div>
 
-        <div className="mt-20 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div ref={gridRef} className="mt-20 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {programs.map((program) => (
             <div
               key={program.title}
-              className="flex gap-5 rounded-2xl border border-border bg-card p-6 transition-all hover:shadow-md"
+              className={`flex gap-5 rounded-2xl border border-border/50 bg-card/70 backdrop-blur-sm p-6 transition-all duration-300 ${gridVisible ? `animate-fade-in-up ${program.delay}` : "opacity-0"}`}
             >
               <div
-                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${program.color}`}
+                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 ${program.color}`}
               >
                 <program.icon className="h-6 w-6" />
               </div>
@@ -86,3 +99,4 @@ export function ProgramsSection() {
     </section>
   )
 }
+

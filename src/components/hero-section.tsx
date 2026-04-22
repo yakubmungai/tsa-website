@@ -1,15 +1,26 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
+import Image from "next/image"
+import { useLanguage } from "@/components/language-context"
+import { translations } from "@/lib/translations"
 
 export function HeroSection() {
+  const { language } = useLanguage()
+  const t = translations[language].hero
+
   return (
     <section className="relative min-h-[90vh] flex items-center overflow-hidden pt-20">
       {/* Background image with overlay */}
       <div className="absolute inset-0 z-0">
-        <img
-          src="https://images.unsplash.com/photo-1516426122078-c23e76319801?q=80&w=2500&auto=format&fit=crop"
-          alt="Beautiful landscape of Tanzania"
-          className="h-full w-full object-cover"
+        <Image
+          src="/images/hero-bg.png?v=3"
+          alt="Tanzanian diaspora connection"
+          fill
+          priority
+          className="object-cover animate-slow-zoom"
+          sizes="100vw"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 from-20% via-black/40 to-transparent" />
       </div>
@@ -17,30 +28,29 @@ export function HeroSection() {
       <div className="relative z-10 mx-auto max-w-7xl px-6 py-24 md:py-32">
         <div className="max-w-3xl">
           {/* Badge */}
-          <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-card/20 bg-card/10 px-4 py-2 backdrop-blur-sm">
+          <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-card/20 bg-card/10 px-4 py-2 backdrop-blur-sm animate-fade-in-up">
             <span className="inline-block h-2 w-2 rounded-full bg-primary" />
             <span className="text-sm font-medium text-card">
-              Texas-based Diaspora Mutual-Aid Society
+              {t.badge}
             </span>
           </div>
 
-          <h1 className="text-balance font-serif text-4xl font-bold leading-tight text-card sm:text-5xl md:text-6xl lg:text-7xl">
-            Together We Uplift Our Community
+          <h1 className="text-balance font-serif text-4xl font-bold leading-tight text-card sm:text-5xl md:text-6xl lg:text-7xl animate-fade-in-up delay-100">
+            {t.title}
           </h1>
 
-          <p className="mt-6 max-w-xl text-lg leading-relaxed text-card/80 md:text-xl">
-            The Tanzania Sharing Association unites Tanzanians across Texas and beyond,
-            providing mutual aid, cultural connection, and a bridge between home and the diaspora.
+          <p className="mt-6 max-w-xl text-lg leading-relaxed text-card/80 md:text-xl animate-fade-in-up delay-200">
+            {t.description}
           </p>
 
-          <div className="mt-10 flex flex-col gap-4 sm:flex-row">
+          <div className="mt-10 flex flex-col gap-4 sm:flex-row animate-fade-in-up delay-300">
             <Button
               asChild
               size="lg"
-              className="bg-primary text-primary-foreground hover:bg-primary/90 text-base px-8"
+              className="btn-shimmer text-primary-foreground text-base px-8 border-0"
             >
               <a href="#membership">
-                Join Our Community
+                {t.ctaPrimary}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </a>
             </Button>
@@ -48,9 +58,9 @@ export function HeroSection() {
               asChild
               size="lg"
               variant="outline"
-              className="border-card/30 text-card hover:bg-card/10 text-base px-8 bg-transparent"
+              className="border-card/30 text-card hover:bg-card/10 text-base px-8 bg-transparent backdrop-blur-sm"
             >
-              <a href="#about">Learn More</a>
+              <a href="#about">{t.ctaSecondary}</a>
             </Button>
           </div>
         </div>
@@ -66,3 +76,5 @@ export function HeroSection() {
     </section>
   )
 }
+
+
