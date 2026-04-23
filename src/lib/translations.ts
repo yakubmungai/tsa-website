@@ -123,6 +123,11 @@ export interface TranslationSchema {
       description: string;
       cta: string;
     };
+    funeralNotice: {
+      title: string;
+      description: string;
+      cta: string;
+    };
     help: {
       title: string;
       email: string;
@@ -328,6 +333,11 @@ export const translations: Record<Language, TranslationSchema> = {
         title: "Constitution Agreement",
         description: "Review and sign the TSA Constitution to finalize your affiliation.",
         cta: "Sign Agreement",
+      },
+      funeralNotice: {
+        title: "Funeral Notice Form",
+        description: "Submit a notification for a funeral.",
+        cta: "Submit Notice",
       },
       help: {
         title: "Need Assistance?",
@@ -539,6 +549,11 @@ export const translations: Record<Language, TranslationSchema> = {
         title: "Makubaliano ya Katiba",
         description: "Pitia na usaini Katiba ya TSA ili kukamilisha ushirika wako.",
         cta: "Saini Makubaliano",
+      },
+      funeralNotice: {
+        title: "Fomu ya Taarifa ya Msiba",
+        description: "Tuma taarifa ya msiba.",
+        cta: "Tuma Taarifa",
       },
       help: {
         title: "Unahitaji Msaada?",
