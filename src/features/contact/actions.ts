@@ -7,17 +7,21 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export async function submitContactMessage(formData: FormData) {
   try {
     if (!process.env.RESEND_API_KEY) {
-      throw new Error('Resend API key is not configured');
+      console.error('RESEND_API_KEY is missing');
+      return { success: false, error: 'Email service not configured' };
     }
 
-    const firstName = formData.get('firstName') as string;
-    const lastName = formData.get('lastName') as string;
-    const email = formData.get('email') as string;
-    const message = formData.get('message') as string;
+    const firstName = formData.get('firstName') as string || 'N/A';
+    const lastName = formData.get('lastName') as string || 'N/A';
+    const email = formData.get('email') as string || 'N/A';
+    const message = formData.get('message') as string || 'N/A';
+    const adminEmail = process.env.ADMIN_EMAIL || 'tansha.hq@gmail.com';
+
+    console.log(`Attempting to send contact message from ${firstName} ${lastName} (${email}) to ${adminEmail}`);
 
     const { data, error } = await resend.emails.send({
-      from: 'TSA Website <info@tansha.org>',
-      to: [process.env.ADMIN_EMAIL || 'tansha.hq@gmail.com'],
+      from: 'TSA Website <website@mail.tansha.org>',
+      to: [adminEmail],
       replyTo: email,
       subject: `New Contact Message from ${firstName} ${lastName}`,
       html: `
@@ -45,12 +49,14 @@ export async function submitContactMessage(formData: FormData) {
     });
 
     if (error) {
+      console.error('Resend Error:', error);
       return { success: false, error: error.message };
     }
 
+    console.log('Contact message sent successfully:', data?.id);
     return { success: true };
   } catch (err) {
-    console.error('Contact Submission Error:', err);
+    console.error('Contact Submission Unexpected Error:', err);
     return { success: false, error: 'Internal Server Error' };
   }
 }

@@ -34,7 +34,7 @@ export async function submitFuneralNotice(formData: FormData) {
     };
 
     const { data, error } = await resend.emails.send({
-      from: 'TSA Website <info@tansha.org>',
+      from: 'TSA Website <website@mail.tansha.org>',
       to: [process.env.ADMIN_EMAIL || 'tansha.hq@gmail.com'],
       subject: `New Funeral Notice: ${fields.deceasedName}`,
       html: `

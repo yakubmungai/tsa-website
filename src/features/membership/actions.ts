@@ -51,7 +51,7 @@ export async function submitMembership(formData: FormData) {
     const buffer = idFile && idFile.size > 0 ? Buffer.from(await idFile.arrayBuffer()) : null;
 
     const { data, error } = await resend.emails.send({
-      from: 'TSA Website <info@tansha.org>',
+      from: 'TSA Website <website@mail.tansha.org>',
       to: [process.env.ADMIN_EMAIL || 'tansha.hq@gmail.com'],
       subject: `New TSA Membership Application: ${fields.firstName} ${fields.lastName}`,
       html: `
@@ -158,7 +158,7 @@ export async function submitConstitution(values: any) {
     const { firstName, lastName, email, phone, streetAddress, city, state, zipCode, signature, agreementDate } = values;
 
     const { data, error } = await resend.emails.send({
-      from: 'TSA Website <info@tansha.org>',
+      from: 'TSA Website <website@mail.tansha.org>',
       to: [process.env.ADMIN_EMAIL || 'tansha.hq@gmail.com'],
       subject: `Constitution Agreement Signed: ${firstName} ${lastName}`,
       html: `
