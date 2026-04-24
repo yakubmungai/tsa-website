@@ -90,6 +90,30 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${publicSans.variable} ${merriweather.variable} font-sans antialiased`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              "name": "Tanzania Sharing Association",
+              "alternateName": "TSA",
+              "url": "https://tansha.org",
+              "logo": "https://tansha.org/TSA_Logo-removebg-preview.png",
+              "description": "The Tanzania Sharing Association (TSA) is a US-wide diaspora mutual-aid society uniting Tanzanians across America through community support, cultural preservation, and shared prosperity.",
+              "address": {
+                "@type": "PostalAddress",
+                "addressCountry": "US"
+              },
+              "contactPoint": {
+                "@type": "ContactPoint",
+                "telephone": "281-966-8284",
+                "contactType": "general",
+                "email": "tansha.hq@gmail.com"
+              }
+            })
+          }}
+        />
         <LanguageProvider>{children}</LanguageProvider>
         <Toaster />
         <SonnerToaster />
