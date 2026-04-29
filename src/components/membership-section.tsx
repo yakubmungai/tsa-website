@@ -24,10 +24,10 @@ export function MembershipSection() {
             {/* Image side */}
             <div className="relative min-h-[300px] lg:min-h-0 overflow-hidden">
               <Image
-                src="/images/membership-connection.png"
+                src="/images/members-join.jpeg"
                 alt="Tanzanian diaspora connection"
                 fill
-                className="object-cover transition-transform duration-700 hover:scale-105"
+                className="object-cover object-[center_18%] transition-transform duration-700 hover:scale-105"
                 sizes="(max-width: 1024px) 100vw, 50vw"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-primary/40 via-primary/20 to-transparent" />

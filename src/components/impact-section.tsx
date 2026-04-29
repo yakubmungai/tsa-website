@@ -17,12 +17,12 @@ export function ImpactSection() {
         <div className="grid items-center gap-16 lg:grid-cols-2">
           {/* Image side */}
           <div ref={imgRef} className={`relative ${imgVisible ? "animate-fade-in-up" : "opacity-0"}`}>
-            <div className="relative h-[400px] overflow-hidden rounded-3xl shadow-xl md:h-[500px]">
+            <div className="relative aspect-[4/3] overflow-hidden rounded-3xl shadow-xl md:aspect-video">
               <Image
-                src="/images/impact-community.png"
+                src="/images/members-community.jpeg"
                 alt="Tanzanian community in US"
                 fill
-                className="object-cover transition-transform duration-500 hover:scale-105"
+                className="object-cover object-[15%_center] transition-transform duration-500 hover:scale-105"
                 sizes="(max-width: 768px) 100vw, 50vw"
               />
             </div>
