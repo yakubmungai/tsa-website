@@ -71,9 +71,12 @@ export function MembershipSection() {
                   asChild
                   size="lg"
                   variant="outline"
-                  className="border-border text-foreground hover:bg-muted bg-transparent"
+                  className="border-primary/50 text-foreground hover:bg-primary/5 bg-transparent group"
                 >
-                  <a href="/constitution">{t.ctaSecondary}</a>
+                  <a href="/constitution">
+                    {t.ctaSecondary}
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </a>
                 </Button>
               </div>
             </div>

@@ -112,7 +112,7 @@ export function Footer() {
                 </div>
                 <div>
                   <p className="font-bold text-background">{t.phone.title}</p>
-                  <p className="mt-1 text-background/70">281 966 8284</p>
+                  <p className="mt-1 text-background/70">206 602 0506</p>
                 </div>
               </div>
             </div>
@@ -133,8 +133,9 @@ export function Footer() {
                   </div>
                   <div>
                     <p className="font-bold text-sm text-background">{t.contributions.zelle}</p>
-                    <p className="mt-1 text-xs text-background/70 italic">
-                      Coming Soon
+                    <p className="mt-1 text-xs text-background/70">
+                      Name: Tanzania Assosciation<br />
+                      Phone number: 206 602 0506
                     </p>
                   </div>
                 </div>
@@ -148,8 +149,8 @@ export function Footer() {
                   </div>
                   <div>
                     <p className="font-bold text-sm text-background">{t.contributions.cashapp}</p>
-                    <p className="mt-1 text-xs text-background/70 italic">
-                      Coming Soon
+                    <p className="mt-1 text-xs text-background/70">
+                      $TSA2025
                     </p>
                   </div>
                 </div>

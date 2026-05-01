@@ -74,6 +74,31 @@ export interface TranslationSchema {
     success: string;
     error: string;
   };
+  renewal: {
+    title: string;
+    subtitle: string;
+    personalSection: string;
+    fullName: string;
+    address: string;
+    phone: string;
+    witnessesSection: string;
+    witnessName: string;
+    witnessPhone: string;
+    adminSection: string;
+    adminName: string;
+    adminRelationship: string;
+    adminPhone: string;
+    adminNote: string;
+    agreementSection: string;
+    agreementTextEn: string;
+    agreementTextSw: string;
+    signature: string;
+    date: string;
+    submit: string;
+    submitting: string;
+    success: string;
+    error: string;
+  };
   constitution: {
     title: string;
     firstName: string;
@@ -124,6 +149,11 @@ export interface TranslationSchema {
       cta: string;
     };
     funeralNotice: {
+      title: string;
+      description: string;
+      cta: string;
+    };
+    renewal: {
       title: string;
       description: string;
       cta: string;
@@ -255,6 +285,31 @@ export const translations: Record<Language, TranslationSchema> = {
       success: "Form submitted successfully!",
       error: "Something went wrong. Please try again.",
     },
+    renewal: {
+      title: "TSA Renewal Form (2025-2030)",
+      subtitle: "Membership Renewal Agreement",
+      personalSection: "1. Personal Information",
+      fullName: "Full Name",
+      address: "Physical Address",
+      phone: "Phone Number",
+      witnessesSection: "2. Witnesses",
+      witnessName: "Witness Name",
+      witnessPhone: "Phone",
+      adminSection: "3. Next of Kin (Administrators)",
+      adminName: "Administrator Name",
+      adminRelationship: "Relationship",
+      adminPhone: "Phone Number",
+      adminNote: "Note: One administrator must reside in the USA.",
+      agreementSection: "4. Membership Agreement",
+      agreementTextEn: "I agree to join the Tanzania Sharing Association (TSA) for a five (5) year contract from April 2025 to March 2030. If I choose to terminate my membership before the agreed period, I am obligated to refund all the contributions I received during my time as a member. I promise to be faithful and follow all rules according to the TSA constitution (2025-2030). If I violate these rules, the TSA leadership has the right to take legal action against me.",
+      agreementTextSw: "Nimekubali kujiunga na Tanzania Sharing Association (TSA) kwa mkataba wa miaka mitano (5) kuanzia Aprili 2025 hadi Machi 2030. Endapo nitaamua kuvunja mkataba (kutoka) kabla ya muda tuliokubaliana, nitalazimika kurudisha pesa zote nilizochangiwa kipindi nilipokuwa mwanachama. Ninaahidi kuwa mwaminifu na kufuata sheria zote za katiba ya TSA (2025-2030). Nikikiuka kanuni hizi, uongozi una haki ya kunichukulia hatua za kisheria.",
+      signature: "Digital Signature (Full Name)",
+      date: "Date of Agreement",
+      submit: "Submit Renewal Form",
+      submitting: "Submitting...",
+      success: "Renewal form submitted successfully!",
+      error: "Submission failed. Please try again.",
+    },
     constitution: {
       title: "Constitution Agreement",
       firstName: "First Name",
@@ -339,6 +394,11 @@ export const translations: Record<Language, TranslationSchema> = {
         description: "Submit a notification for a funeral.",
         cta: "Submit Notice",
       },
+      renewal: {
+        title: "Renewal Form",
+        description: "Renew your membership for the 2025-2030 period.",
+        cta: "Start Renewal",
+      },
       help: {
         title: "Need Assistance?",
         email: "Contact us at",
@@ -397,24 +457,24 @@ export const translations: Record<Language, TranslationSchema> = {
     },
     about: {
       badge: "Sisi ni Nani",
-      title: "Tumejikita katika Maadili ya Kitanzania, Tukikua kote Marekani",
-      description: "Ilianzishwa na wahamiaji wa Kitanzania katikati ya Texas, Tanzania Sharing Association (TSA) ni shirika la msaada la kusaidiana lisilo la kifaida lililowekwa wakfu kuimarisha vifungo ndani ya jumuiya yetu ya ughaibuni. Tunatoa wavu wa usalama wa msaada, utajiri wa kitamaduni, na ustawi wa pamoja.",
+      title: "Maadili ya Kitanzania, Maisha ya Marekani",
+      description: "Ilianzishwa na Watanzania waishio katikati ya Texas, Tanzania Sharing Association (TSA) ni umoja wa kusaidiana usio wa kifaida unaolenga kuimarisha undugu wetu hapa ughaibuni. Tunajenga mazingira ya kusaidiana, kuthamini utamaduni wetu, na kusonga mbele pamoja.",
       values: {
         mutualAid: {
-          title: "Msaada wa Pamoja",
-          description: "Tunaamini katika kuinua kila mmoja. Wanachama wetu wanachangia katika mfuko wa pamoja unaosaidia familia kupitia changamoto na sherehe za maisha.",
+          title: "Kusaidiana kwa dhati",
+          description: "Tunaamini katika kuinua kila mmoja. Kupitia mfuko wetu wa pamoja, tunashikana mikono kwenye shida na raha.",
         },
         community: {
-          title: "Jumuiya",
-          description: "Tunakuza hisia kali ya kuwa mali miongoni mwa Watanzania huko Marekani, tukitengeneza nafasi ambapo utamaduni wetu unastawi na vifungo vyetu vinaongezeka.",
+          title: "Umoja na Undugu",
+          description: "Tunajenga umoja thabiti kwa Watanzania waishio Marekani, tukitengeneza mazingira ambapo utamaduni wetu unathaminiwa na urafiki unastawi.",
         },
         heritage: {
-          title: "Urithi wa Kitamaduni",
-          description: "Tunahifadhi na kusherehekea mila, lugha, na desturi za Kitanzania, tukihakikisha watoto wetu wanaendeleza utajiri wa urithi wetu.",
+          title: "Urithi wa Utamaduni",
+          description: "Tunatunza na kusherehekea mila, lugha, na desturi zetu za Kitanzania, ili kuhakikisha watoto wetu wanaufahamu na kuuishi urithi wetu.",
         },
         support: {
-          title: "Msaada na Utetezi",
-          description: "Tunasimama pamoja wakati wa mahitaji, tukitoa msaada wa vitendo, mwongozo, na mtandao wa huduma kwa kila mwanachama.",
+          title: "Msaada na Mwongozo",
+          description: "Tunasimama pamoja kwenye kila hali, tukitoa msaada wa hali na mali, ushauri, na ushirikiano kwa kila mwanachama.",
         },
       },
     },
@@ -470,6 +530,31 @@ export const translations: Record<Language, TranslationSchema> = {
       sending: "Inatuma...",
       success: "Fomu imetwa kwa mafanikio!",
       error: "Kuna tatizo limetokea. Tafadhali jaribu tena.",
+    },
+    renewal: {
+      title: "Fomu ya Kuendeleza Uanachama (2025-2030)",
+      subtitle: "Makubaliano ya Kuendeleza Uanachama",
+      personalSection: "1. Taarifa Binafsi",
+      fullName: "Jina Kamili",
+      address: "Anuani ya Makazi",
+      phone: "Namba ya Simu",
+      witnessesSection: "2. Mashahidi",
+      witnessName: "Jina la Shahidi",
+      witnessPhone: "Simu",
+      adminSection: "3. Wasimamizi",
+      adminName: "Jina la Msimamizi",
+      adminRelationship: "Uhusiano",
+      adminPhone: "Namba ya Simu",
+      adminNote: "Angalizo: Msimamizi mmoja lazima awe Marekani.",
+      agreementSection: "4. Makubaliano ya Uanachama",
+      agreementTextEn: "I agree to join the Tanzania Sharing Association (TSA) for a five (5) year contract from April 2025 to March 2030. If I choose to terminate my membership before the agreed period, I am obligated to refund all the contributions I received during my time as a member. I promise to be faithful and follow all rules according to the TSA constitution (2025-2030). If I violate these rules, the TSA leadership has the right to take legal action against me.",
+      agreementTextSw: "Nimekubali kujiunga na Tanzania Sharing Association (TSA) kwa mkataba wa miaka mitano (5) kuanzia Aprili 2025 hadi Machi 2030. Endapo nitaamua kuvunja mkataba (kutoka) kabla ya muda tuliokubaliana, nitalazimika kurudisha pesa zote nilizochangiwa kipindi nilipokuwa mwanachama. Ninaahidi kuwa mwaminifu na kufuata sheria zote za katiba ya TSA (2025-2030). Nikikiuka kanuni hizi, uongozi una haki ya kunichukulia hatua za kisheria.",
+      signature: "Sahihi ya Kidijitali (Jina Kamili)",
+      date: "Tarehe ya Makubaliano",
+      submit: "Tuma Fomu ya Renewal",
+      submitting: "Inatuma...",
+      success: "Fomu ya renewal imetumwa kwa mafanikio!",
+      error: "Imeshindikana kutuma. Tafadhali jaribu tena.",
     },
     constitution: {
       title: "Makubaliano ya Katiba",
@@ -554,6 +639,11 @@ export const translations: Record<Language, TranslationSchema> = {
         title: "Fomu ya Taarifa ya Msiba",
         description: "Tuma taarifa ya msiba.",
         cta: "Tuma Taarifa",
+      },
+      renewal: {
+        title: "Fomu ya Renewal",
+        description: "Endeleza uanachama wako kwa kipindi cha 2025-2030.",
+        cta: "Anza Renewal",
       },
       help: {
         title: "Unahitaji Msaada?",

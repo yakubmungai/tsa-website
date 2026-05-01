@@ -204,3 +204,102 @@ export async function submitConstitution(values: any) {
     return { success: false, error: 'Internal Server Error' };
   }
 }
+
+export async function submitRenewal(formData: FormData) {
+  try {
+    if (!process.env.RESEND_API_KEY) {
+      throw new Error('Resend API key is not configured');
+    }
+
+    // Dev Note for New Grad: We use a helper to extract strings safely from FormData.
+    // In a production app, always validate that the keys exist.
+    const getString = (key: string) => formData.get(key) as string || 'N/A';
+    
+    // Dev Note: Arrays are sent as JSON strings in FormData. We parse them back to objects.
+    const getArray = (key: string) => {
+      const val = formData.get(key);
+      if (!val) return [];
+      try {
+        return JSON.parse(val as string);
+      } catch (e) {
+        return [];
+      }
+    };
+
+    const fields = {
+      fullName: getString('fullName'),
+      address: getString('address'),
+      phone: getString('phone'),
+      witnesses: getArray('witnesses'),
+      administrators: getArray('administrators'),
+      signature: getString('signature'),
+      agreementDate: getString('agreementDate'),
+    };
+
+    // Dev Note: We're using Resend to send a beautifully formatted HTML email.
+    // This allows the TSA admins to see the renewal details in their inbox immediately.
+    const { data, error } = await resend.emails.send({
+      from: 'TSA Website <website@mail.tansha.org>',
+      to: [process.env.ADMIN_EMAIL || 'tansha.hq@gmail.com'],
+      subject: `TSA Renewal Form (2025-2030): ${fields.fullName}`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 800px; margin: auto; border: 1px solid #eee; padding: 40px; line-height: 1.6; color: #333;">
+          <div style="text-align: center; border-bottom: 3px solid #d97706; padding-bottom: 20px; margin-bottom: 30px;">
+            <h1 style="color: #d97706; margin: 0; font-size: 24px;">TANZANIA SHARING ASSOCIATION (TSA)</h1>
+            <p style="text-align: center; color: #666; margin: 10px 0 0 0; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Membership Renewal (2025-2030)</p>
+          </div>
+          
+          <h2 style="background: #fffbeb; padding: 10px 15px; border-left: 5px solid #d97706; margin-top: 30px; font-size: 18px;">1. Personal Information</h2>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr><td style="padding: 10px; border-bottom: 1px solid #eee; width: 30%; font-weight: bold;">Full Name:</td><td style="padding: 10px; border-bottom: 1px solid #eee;">${fields.fullName}</td></tr>
+            <tr><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Address:</td><td style="padding: 10px; border-bottom: 1px solid #eee;">${fields.address}</td></tr>
+            <tr><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Phone:</td><td style="padding: 10px; border-bottom: 1px solid #eee;">${fields.phone}</td></tr>
+          </table>
+
+          <h2 style="background: #f4f7f6; padding: 10px 15px; border-left: 5px solid #0056b3; margin-top: 30px; font-size: 18px;">2. Witnesses</h2>
+          <table style="width: 100%; border-collapse: collapse; background: #fafafa; border: 1px solid #eee;">
+            <thead style="background: #eee;">
+              <tr><th style="padding: 8px; text-align: left;">Name</th><th style="padding: 8px; text-align: left;">Phone</th></tr>
+            </thead>
+            <tbody>
+              ${fields.witnesses.map((w: any) => `<tr><td style="padding: 8px; border-bottom: 1px solid #eee;">${w.name}</td><td style="padding: 8px; border-bottom: 1px solid #eee;">${w.phone}</td></tr>`).join('')}
+            </tbody>
+          </table>
+
+          <h2 style="background: #f4f7f6; padding: 10px 15px; border-left: 5px solid #0056b3; margin-top: 30px; font-size: 18px;">3. Administrators (Next of Kin)</h2>
+          <table style="width: 100%; border-collapse: collapse; background: #fafafa; border: 1px solid #eee;">
+            <thead style="background: #eee;">
+              <tr><th style="padding: 8px; text-align: left;">Name</th><th style="padding: 8px; text-align: left;">Relationship</th><th style="padding: 8px; text-align: left;">Phone</th></tr>
+            </thead>
+            <tbody>
+              ${fields.administrators.map((a: any) => `<tr><td style="padding: 8px; border-bottom: 1px solid #eee;">${a.name}</td><td style="padding: 8px; border-bottom: 1px solid #eee;">${a.relationship}</td><td style="padding: 8px; border-bottom: 1px solid #eee;">${a.phone}</td></tr>`).join('')}
+            </tbody>
+          </table>
+
+          <h2 style="background: #fffbeb; padding: 10px 15px; border-left: 5px solid #d97706; margin-top: 30px; font-size: 18px;">4. Digital Commitment</h2>
+          <div style="padding: 20px; border: 2px dashed #d97706; border-radius: 8px; background: #fffdfa; margin-top: 10px;">
+            <p style="margin: 0; font-size: 14px; color: #666; font-style: italic;">"I agree to join TSA for a five (5) year contract from April 2025 to March 2030... I promise to be faithful and follow all rules..."</p>
+            <div style="text-align: center; margin-top: 20px;">
+              <p style="margin: 0; font-size: 12px; color: #999; text-transform: uppercase;">Digitally Signed By:</p>
+              <p style="font-family: 'Brush Script MT', cursive, serif; font-size: 32px; color: #d97706; margin: 10px 0;">${fields.signature}</p>
+              <p style="margin: 0; font-size: 14px; color: #666;">Date: ${fields.agreementDate}</p>
+            </div>
+          </div>
+
+          <div style="margin-top: 30px; font-size: 12px; color: #999; text-align: center; border-top: 1px solid #eee; padding-top: 20px;">
+            This renewal was submitted via the TSA Official Website. All data is stored in the association's dynamic records.
+          </div>
+        </div>
+      `,
+    });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error('Renewal Submission Error:', err);
+    return { success: false, error: 'Internal Server Error' };
+  }
+}

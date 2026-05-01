@@ -3,7 +3,7 @@
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { FileText, ClipboardList, ArrowRight, Heart } from "lucide-react";
+import { FileText, ClipboardList, ArrowRight, Heart, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useLanguage } from "@/components/language-context";
 import { translations } from "@/lib/translations"
@@ -24,7 +24,7 @@ export default function FormsSelectionPage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6 w-full max-w-5xl">
+          <div className="grid md:grid-cols-2 gap-8 w-full max-w-4xl">
             {/* Membership Form Square */}
             <Link href="/membership" className="h-full">
               <Card className="h-full cursor-pointer transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 border-2 hover:border-primary group flex flex-col">
@@ -82,6 +82,27 @@ export default function FormsSelectionPage() {
                 <CardContent className="flex justify-center pb-8 mt-auto">
                   <div className="flex items-center text-slate-800 font-semibold text-sm">
                     {t.funeralNotice.cta}
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
+            {/* Renewal Form Square */}
+            <Link href="/renewal" className="h-full">
+              <Card className="h-full cursor-pointer transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 border-2 hover:border-accent group flex flex-col">
+                <CardHeader className="text-center pt-8 pb-4">
+                  <div className="mx-auto h-16 w-16 rounded-xl bg-accent/10 flex items-center justify-center mb-4 group-hover:bg-accent/20 transition-colors">
+                    <ShieldCheck className="h-8 w-8 text-accent-foreground" />
+                  </div>
+                  <CardTitle className="text-xl font-bold">{t.renewal.title}</CardTitle>
+                  <CardDescription className="text-sm mt-1 px-4">
+                    {t.renewal.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex justify-center pb-8 mt-auto">
+                  <div className="flex items-center text-accent-foreground font-semibold text-sm">
+                    {t.renewal.cta}
                     <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </div>
                 </CardContent>
