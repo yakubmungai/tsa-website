@@ -110,6 +110,8 @@ export interface TranslationSchema {
     signature: string;
     submit: string;
     success: string;
+    viewDocument: string;
+    documentDescription: string;
   };
   programs: {
     badge: string;
@@ -321,6 +323,8 @@ export const translations: Record<Language, TranslationSchema> = {
       signature: "Member Signature and Date",
       submit: "Submit Agreement",
       success: "Agreement submitted successfully!",
+      viewDocument: "Read TSA Constitution (2025-2030)",
+      documentDescription: "Please review the official TSA Constitution document below before signing your agreement.",
     },
     programs: {
       badge: "Our Programs",
@@ -386,7 +390,7 @@ export const translations: Record<Language, TranslationSchema> = {
       },
       constitution: {
         title: "Constitution Agreement",
-        description: "Review and sign the TSA Constitution to finalize your affiliation.",
+        description: "Read the official TSA Constitution (2025-2030) and sign the agreement to finalize your affiliation.",
         cta: "Sign Agreement",
       },
       funeralNotice: {
@@ -567,6 +571,8 @@ export const translations: Record<Language, TranslationSchema> = {
       signature: "Sahihi ya Mwanachama na Tarehe",
       submit: "Tuma Makubaliano",
       success: "Makubaliano yametuma kwa mafanikio!",
+      viewDocument: "Soma Katiba ya TSA (2025-2030)",
+      documentDescription: "Tafadhali kagua hati rasmi ya Katiba ya TSA hapa chini kabla ya kusaini makubaliano yako.",
     },
     programs: {
       badge: "Mipango Yetu",
@@ -632,7 +638,7 @@ export const translations: Record<Language, TranslationSchema> = {
       },
       constitution: {
         title: "Makubaliano ya Katiba",
-        description: "Pitia na usaini Katiba ya TSA ili kukamilisha ushirika wako.",
+        description: "Soma Katiba rasmi ya TSA (2025-2030) na usaini makubaliano ili kukamilisha ushirika wako.",
         cta: "Saini Makubaliano",
       },
       funeralNotice: {

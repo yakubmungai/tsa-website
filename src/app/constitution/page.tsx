@@ -45,6 +45,8 @@ const translations = {
     declarationSection: "Declaration",
     signingSection: "Signature",
     placeholder: "Type here",
+    viewDocument: "Read TSA Constitution (2025-2030)",
+    documentDescription: "Please review the official TSA Constitution document below before signing your agreement.",
   },
   sw: {
     header: "TANZANIA SHARING ASSOCIATION (TSA)",
@@ -67,6 +69,8 @@ const translations = {
     declarationSection: "Tamko",
     signingSection: "Sahihi",
     placeholder: "Andika hapa",
+    viewDocument: "Soma Katiba ya TSA (2025-2030)",
+    documentDescription: "Tafadhali kagua hati rasmi ya Katiba ya TSA hapa chini kabla ya kusaini makubaliano yako.",
   }
 };
 
@@ -139,6 +143,25 @@ export default function ConstitutionPage() {
             </CardHeader>
 
             <CardContent className="pt-10 pb-12 px-6 md:px-12">
+              <div className="mb-10 p-6 rounded-2xl bg-secondary/5 border border-secondary/20 flex flex-col md:flex-row items-center gap-6 group transition-all hover:bg-secondary/10">
+                <div className="h-16 w-16 rounded-xl bg-secondary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <FileText className="h-8 w-8 text-secondary" />
+                </div>
+                <div className="flex-1 text-center md:text-left">
+                  <h3 className="text-lg font-bold text-foreground">{t.viewDocument}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">{t.documentDescription}</p>
+                </div>
+                <Button 
+                  asChild
+                  variant="outline" 
+                  className="border-secondary text-secondary hover:bg-secondary hover:text-white font-bold px-8 h-12 rounded-xl transition-all"
+                >
+                  <a href="/documents/TSA_KATIBA_2025.pdf" target="_blank" rel="noopener noreferrer">
+                    {lang === 'en' ? 'Open PDF' : 'Fungua PDF'}
+                  </a>
+                </Button>
+              </div>
+
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-10">
                   <div className="space-y-6">
