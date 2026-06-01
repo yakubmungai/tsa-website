@@ -24,7 +24,7 @@ export default function FormsSelectionPage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8 w-full max-w-4xl">
+          <div className="grid md:grid-cols-3 gap-8 w-full max-w-5xl">
             {/* Membership Form Square */}
             <Link href="/membership" className="h-full">
               <Card className="h-full cursor-pointer transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 border-2 hover:border-primary group flex flex-col">
@@ -88,7 +88,7 @@ export default function FormsSelectionPage() {
               </Card>
             </Link>
 
-            {/* Renewal Form Square */}
+            {/* Renewal Form Square - Archived (Deadline Passed)
             <Link href="/renewal" className="h-full">
               <Card className="h-full cursor-pointer transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 border-2 hover:border-accent group flex flex-col">
                 <CardHeader className="text-center pt-8 pb-4">
@@ -108,6 +108,7 @@ export default function FormsSelectionPage() {
                 </CardContent>
               </Card>
             </Link>
+            */}
           </div>
 
           <div className="mt-12 text-center p-4 rounded-xl bg-primary/5 border border-primary/10 max-w-md">
