@@ -13,6 +13,7 @@ const navLinks = (t: any) => [
   { label: t.programs, href: "/#programs" },
   { label: t.events, href: "/events" },
   { label: t.forms, href: "/forms" },
+  { label: t.blog, href: "/blog" },
   { label: t.contact, href: "/#contact" },
 ]
 

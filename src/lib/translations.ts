@@ -6,6 +6,7 @@ export interface TranslationSchema {
     programs: string;
     events: string;
     forms: string;
+    blog: string;
     contact: string;
     joinUs: string;
     switchTo: string;
@@ -191,6 +192,17 @@ export interface TranslationSchema {
     constitution: string;
     bylaws: string;
   };
+  blog: {
+    badge: string;
+    title: string;
+    subtitle: string;
+    readMore: string;
+    backToBlog: string;
+    publishedOn: string;
+    author: string;
+    readTime: string;
+    noPosts: string;
+  };
 }
 
 export const translations: Record<Language, TranslationSchema> = {
@@ -200,6 +212,7 @@ export const translations: Record<Language, TranslationSchema> = {
       programs: "Programs",
       events: "Events",
       forms: "Forms",
+      blog: "Blog",
       contact: "Contact",
       joinUs: "Become a Member",
       switchTo: "SW",
@@ -441,6 +454,17 @@ export const translations: Record<Language, TranslationSchema> = {
       constitution: "Constitution",
       bylaws: "Bylaws",
     },
+    blog: {
+      badge: "News & Stories",
+      title: "TSA Blog",
+      subtitle: "Stay updated with stories, announcements, and news from the Tanzanian diaspora in the United States.",
+      readMore: "Read Article",
+      backToBlog: "Back to Blog",
+      publishedOn: "Published on",
+      author: "Author",
+      readTime: "min read",
+      noPosts: "No articles found.",
+    },
   },
   sw: {
     nav: {
@@ -448,6 +472,7 @@ export const translations: Record<Language, TranslationSchema> = {
       programs: "Mipango",
       events: "Matukio",
       forms: "Fomu",
+      blog: "Blogu",
       contact: "Wasiliana",
       joinUs: "Kuwa Mwanachama",
       switchTo: "EN",
@@ -688,6 +713,17 @@ export const translations: Record<Language, TranslationSchema> = {
       privacy: "Sera ya Faragha",
       constitution: "Katiba",
       bylaws: "Sheria Ndogo",
+    },
+    blog: {
+      badge: "Habari & Hadithi",
+      title: "Blogu ya TSA",
+      subtitle: "Pata taarifa za hivi punde, matangazo, na habari kutoka kwa diaspora ya Watanzania nchini Marekani.",
+      readMore: "Soma Zaidi",
+      backToBlog: "Rudi kwenye Blogu",
+      publishedOn: "Imechapishwa mnamo",
+      author: "Mwandishi",
+      readTime: "dakika za kusoma",
+      noPosts: "Hakuna makala yaliyopatikana.",
     },
   },
 };
