@@ -10,3 +10,14 @@ node_modules/
 .next/
 .env*.local
 .DS_Store
+
+# Sensitive credentials
+.env
+.env.local
+
+# Spreadsheets & sensitive assets
+*.xlsx
+*.pdf
+
+# Scratch / Temporary scripts
+scratch/

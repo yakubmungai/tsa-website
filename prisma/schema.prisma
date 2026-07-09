@@ -1,0 +1,89 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String?   // Nullable for users who only use Google login
+  role         Role      @default(MEMBER) // MEMBER, ADMIN
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  
+  // Link to the member profile details
+  memberId     String?   @unique
+  member       Member?   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+}
+
+enum Role {
+  MEMBER
+  ADMIN
+}
+
+// Verification tokens for OTP code verification during signup
+model VerificationToken {
+  id        String   @id @default(uuid())
+  target    String   // Email address
+  token     String   // 6-digit OTP code
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([target, token])
+}
+
+// Member profile details
+model Member {
+  id              String             @id @default(uuid())
+  names           String             // Full name
+  phone           String?            // Primary phone
+  address         String?            // Full address
+  husbandWife     String?            // Spouse name
+  spousePhone     String?
+  parents         String[]           // List of parents
+  children        String[]           // List of children
+  siblings        String[]           // List of siblings
+  witnesses       Json[]             // Array of { name, phone }
+  nextOfKin       Json[]             // Array of { name, phone }
+  
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  user            User?
+  transactions    Transaction[]
+  submissions     FormSubmission[]
+}
+
+// Transaction history for auditing balances
+model Transaction {
+  id          String   @id @default(uuid())
+  memberId    String
+  member      Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  amount      Decimal  @db.Decimal(10, 2)
+  type        String   // "ADVANCE", "REGISTRATION", "MEMBERSHIP", "OTHER"
+  description String?
+  date        DateTime @default(now())
+}
+
+// Form submissions
+model FormSubmission {
+  id         String   @id @default(uuid())
+  memberId   String?  // Nullable for guest/onboarding forms
+  member     Member?  @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  formType   String   // "MEMBERSHIP", "CONSTITUTION", "FUNERAL_ASSISTANCE", "RENEWAL"
+  status     Status   @default(PENDING)
+  data       Json     // Full form payload
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+enum Status {
+  PENDING
+  PROCESSING
+  APPROVED
+  REJECTED
+}

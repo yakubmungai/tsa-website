@@ -5,6 +5,8 @@ import { useState, useEffect } from "react"
 import { Menu, X, Globe } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useLanguage } from "@/components/language-context"
+import { useSession, signOut } from 'next-auth/react'
+import Link from 'next/link'
 
 import { translations } from "@/lib/translations"
 
@@ -21,6 +23,7 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const { language, toggleLanguage } = useLanguage()
+  const { data: session, status } = useSession()
   const pathname = usePathname()
   const t = translations[language].nav
 
@@ -77,7 +80,7 @@ export function Navbar() {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-4 md:flex">
+        <div className="hidden items-center gap-3 md:flex font-sans">
           <Button
             variant="ghost"
             size="sm"
@@ -88,9 +91,20 @@ export function Navbar() {
             <Globe className="h-4 w-4" />
             <span className="uppercase text-xs font-bold">{t.switchTo}</span>
           </Button>
-          <Button asChild className="btn-shimmer text-primary-foreground border-0">
-            <a href="/#membership">{t.joinUs}</a>
-          </Button>
+          {status === "authenticated" ? (
+            <>
+              <Button asChild variant="outline" className="border-slate-200 text-xs font-semibold">
+                <Link href={session?.user?.role === 'ADMIN' ? '/admin/members' : '/portal'}>Dashboard</Link>
+              </Button>
+              <Button onClick={() => signOut({ callbackUrl: '/' })} className="bg-slate-900 hover:bg-slate-800 text-white border-0 text-xs font-semibold">
+                Logout
+              </Button>
+            </>
+          ) : (
+            <Button asChild className="btn-shimmer text-primary-foreground border-0 text-xs font-semibold">
+              <a href="/login">Login / Signup</a>
+            </Button>
+          )}
         </div>
 
         <button
@@ -126,11 +140,24 @@ export function Navbar() {
               <Globe className="h-4 w-4" />
               <span className="uppercase text-xs font-bold">{t.switchTo}</span>
             </Button>
-            <Button asChild className="mt-2 w-full btn-shimmer text-primary-foreground border-0">
-              <a href="/#membership" onClick={() => setMobileOpen(false)}>
-                {t.joinUs}
-              </a>
-            </Button>
+            {status === "authenticated" ? (
+              <>
+                <Button asChild variant="outline" className="mt-2 w-full border-slate-200 text-sm font-semibold justify-start">
+                  <a href={session?.user?.role === 'ADMIN' ? '/admin/members' : '/portal'} onClick={() => setMobileOpen(false)}>
+                    Dashboard
+                  </a>
+                </Button>
+                <Button onClick={() => { signOut({ callbackUrl: '/' }); setMobileOpen(false); }} className="mt-2 w-full bg-slate-900 hover:bg-slate-800 text-white border-0 text-sm font-semibold">
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <Button asChild className="mt-2 w-full btn-shimmer text-primary-foreground border-0 text-sm font-semibold">
+                <a href="/login" onClick={() => setMobileOpen(false)}>
+                  Login / Signup
+                </a>
+              </Button>
+            )}
           </nav>
         </div>
       )}

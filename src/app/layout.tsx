@@ -6,6 +6,7 @@ import './globals.css'
 import { LanguageProvider } from "@/components/language-context"
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as SonnerToaster } from "@/components/ui/sonner"
+import { AuthProvider } from "@/components/auth-provider"
 
 const publicSans = Public_Sans({ subsets: ['latin'], variable: '--font-public-sans' })
 const merriweather = Merriweather({
@@ -114,7 +115,9 @@ export default function RootLayout({
             })
           }}
         />
-        <LanguageProvider>{children}</LanguageProvider>
+        <AuthProvider>
+          <LanguageProvider>{children}</LanguageProvider>
+        </AuthProvider>
         <Toaster />
         <SonnerToaster />
       </body>
