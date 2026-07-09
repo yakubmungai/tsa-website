@@ -8,6 +8,8 @@ import { AdminPostTransaction } from '@/components/admin-post-transaction';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { AdminEditMember } from '@/components/admin-edit-member';
+import { AdminDeleteMember } from '@/components/admin-delete-member';
 import { 
   ArrowLeft, 
   User, 
@@ -90,7 +92,7 @@ export default async function AdminMemberDetailPage({ params }: { params: Promis
         <div className="bg-white border border-slate-100 rounded-xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div className="space-y-2">
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">{member.names}</h1>
-            <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-slate-500 font-semibold">
+            <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-slate-500 font-semibold pb-1">
               <span className="flex items-center gap-1">
                 <Phone className="h-3.5 w-3.5" />
                 {member.phone || 'N/A'}
@@ -99,6 +101,11 @@ export default async function AdminMemberDetailPage({ params }: { params: Promis
                 <MapPin className="h-3.5 w-3.5" />
                 {member.address || 'N/A'}
               </span>
+            </div>
+            {/* Database controls */}
+            <div className="flex gap-2">
+              <AdminEditMember member={member} />
+              <AdminDeleteMember memberId={member.id} memberNames={member.names} />
             </div>
           </div>
           <div className="bg-slate-50 border border-slate-100 rounded-lg px-6 py-3 flex flex-col items-center md:items-end justify-center min-w-40">

@@ -58,10 +58,13 @@ export async function updateMemberDetails(memberId: string, data: any) {
         parents: data.parents || [],
         children: data.children || [],
         siblings: data.siblings || [],
+        witnesses: data.witnesses || [],
+        nextOfKin: data.nextOfKin || [],
       },
     });
 
     revalidatePath(`/admin/members/${memberId}`);
+    revalidatePath('/admin/members');
     return { success: true };
   } catch (err: any) {
     console.error('Error updating member details:', err);
@@ -167,5 +170,33 @@ export async function rejectSubmission(submissionId: string) {
   } catch (err: any) {
     console.error('Error rejecting submission:', err);
     return { success: false, error: err.message || 'Failed to reject submission.' };
+  }
+}
+
+// Create a new member profile from scratch
+export async function createMember(data: any) {
+  try {
+    await verifyAdmin();
+
+    const newMember = await db.member.create({
+      data: {
+        names: data.names,
+        phone: data.phone || null,
+        address: data.address || null,
+        husbandWife: data.husbandWife || null,
+        spousePhone: data.spousePhone || null,
+        parents: data.parents || [],
+        children: data.children || [],
+        siblings: data.siblings || [],
+        witnesses: data.witnesses || [],
+        nextOfKin: data.nextOfKin || [],
+      },
+    });
+
+    revalidatePath('/admin/members');
+    return { success: true, memberId: newMember.id };
+  } catch (err: any) {
+    console.error('Error creating member:', err);
+    return { success: false, error: err.message || 'Failed to create member.' };
   }
 }

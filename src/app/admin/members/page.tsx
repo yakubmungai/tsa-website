@@ -32,6 +32,13 @@ export default async function AdminMembersPage() {
       names: m.names,
       phone: m.phone,
       address: m.address,
+      husbandWife: m.husbandWife,
+      spousePhone: m.spousePhone,
+      parents: m.parents,
+      children: m.children,
+      siblings: m.siblings,
+      witnesses: m.witnesses,
+      nextOfKin: m.nextOfKin,
       balance,
     };
   });
