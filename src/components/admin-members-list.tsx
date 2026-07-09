@@ -90,6 +90,18 @@ export function AdminMembersList({ initialMembers }: { initialMembers: MemberWit
     XLSX.writeFile(workbook, `TSA_Database_Backup_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
+  // Helper to load image as base64 client-side
+  const getBase64ImageFromUrl = async (imageUrl: string): Promise<string> => {
+    const res = await fetch(imageUrl);
+    const blob = await res.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
   // Export PDF Report of alphabetical names and net balances (WhatsApp sharing optimized)
   const handleExportPDF = async () => {
     const { jsPDF } = await import('jspdf');
@@ -97,17 +109,25 @@ export function AdminMembersList({ initialMembers }: { initialMembers: MemberWit
 
     const doc = new jsPDF();
     
-    // Add TSA header
+    try {
+      // Load and add TSA Logo
+      const logoBase64 = await getBase64ImageFromUrl('/images/tsa-logo.png');
+      doc.addImage(logoBase64, 'PNG', 14, 11, 18, 18);
+    } catch (e) {
+      console.warn('Could not load logo in PDF, falling back to text only', e);
+    }
+
+    // Add TSA header text shifted to make space for logo
     doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(16);
+    doc.setFontSize(15);
     doc.setTextColor(16, 124, 65); // Emerald green theme
-    doc.text('TANZANIA SHARING ASSOCIATION (TSA)', 14, 20);
+    doc.text('TANZANIA SHARING ASSOCIATION (TSA)', 35, 19);
     
     // Add subtitle
     doc.setFontSize(11);
     doc.setFont('Helvetica', 'normal');
     doc.setTextColor(100, 116, 139); // Slate-500
-    doc.text('Official Member Balance Statement', 14, 27);
+    doc.text('Official Member Balance Statement', 35, 25);
     
     // Add date
     const dateStr = new Date().toLocaleDateString('en-US', {
@@ -115,8 +135,8 @@ export function AdminMembersList({ initialMembers }: { initialMembers: MemberWit
       month: 'long',
       day: 'numeric'
     });
-    doc.setFontSize(9);
-    doc.text(`Generated on: ${dateStr}`, 14, 33);
+    doc.setFontSize(8.5);
+    doc.text(`Generated on: ${dateStr}`, 35, 31);
     
     // Header divider line
     doc.setDrawColor(226, 232, 240);
@@ -127,14 +147,13 @@ export function AdminMembersList({ initialMembers }: { initialMembers: MemberWit
     const tableRows = sortedMembers.map((m, idx) => [
       String(idx + 1),
       m.names,
-      m.phone || 'N/A',
       m.balance >= 0 ? `+$${m.balance.toFixed(2)}` : `-$${Math.abs(m.balance).toFixed(2)}`
     ]);
     
     // Build the table
     autoTable(doc, {
       startY: 43,
-      head: [['No.', 'Member Name', 'Phone Number', 'Net Balance']],
+      head: [['No.', 'Member Name', 'Net Balance']],
       body: tableRows,
       theme: 'striped',
       headStyles: {
@@ -146,17 +165,16 @@ export function AdminMembersList({ initialMembers }: { initialMembers: MemberWit
       },
       columnStyles: {
         0: { cellWidth: 15 },
-        1: { cellWidth: 80 },
-        2: { cellWidth: 45 },
-        3: { cellWidth: 40, fontStyle: 'bold', halign: 'right' }
+        1: { cellWidth: 135 },
+        2: { cellWidth: 32, fontStyle: 'bold', halign: 'right' }
       },
       styles: {
         fontSize: 9,
         cellPadding: 3
       },
       didDrawCell: (data) => {
-        // Color balance column values dynamically
-        if (data.column.index === 3 && data.cell.section === 'body') {
+        // Color balance column values dynamically (index 2 is Net Balance now)
+        if (data.column.index === 2 && data.cell.section === 'body') {
           const val = data.cell.text[0];
           if (val.startsWith('-')) {
             doc.setTextColor(225, 29, 72); // Rose-600 (Red)
