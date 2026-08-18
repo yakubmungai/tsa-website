@@ -1,8 +1,25 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import GoogleProvider from 'next-auth/providers/google';
 import { db } from './db';
 import { verifyPassword } from './crypto';
+
+// Fail loudly rather than falling back to a hardcoded secret. A predictable
+// secret makes every session JWT — including admin sessions — forgeable.
+const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET;
+if (!NEXTAUTH_SECRET) {
+  throw new Error(
+    'NEXTAUTH_SECRET is not set. Refusing to start with a predictable session secret.'
+  );
+}
+
+// A throwaway hash with the same cost as a real one. Verified against whenever
+// the email is unknown, so a missing account and a wrong password take the same
+// amount of time and return the same message — no user-existence oracle.
+const DUMMY_PASSWORD_HASH =
+  '0000000000000000000000000000000000000000000000000000000000000000:' +
+  '0'.repeat(128);
+
+const INVALID_CREDENTIALS = 'Invalid email or password';
 
 const providers: any[] = [
   CredentialsProvider({
@@ -21,13 +38,15 @@ const providers: any[] = [
         include: { member: true },
       });
 
-      if (!user || !user.passwordHash) {
-        throw new Error('No user found with this email');
-      }
+      // Always run a verification, even when there is no user, so response
+      // timing does not reveal whether the address is registered.
+      const isPasswordValid = verifyPassword(
+        credentials.password,
+        user?.passwordHash ?? DUMMY_PASSWORD_HASH
+      );
 
-      const isPasswordValid = verifyPassword(credentials.password, user.passwordHash);
-      if (!isPasswordValid) {
-        throw new Error('Incorrect password');
+      if (!user || !user.passwordHash || !isPasswordValid) {
+        throw new Error(INVALID_CREDENTIALS);
       }
 
       return {
@@ -40,53 +59,6 @@ const providers: any[] = [
     },
   }),
 ];
-
-if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-  providers.push(
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      async profile(profile) {
-        // Find or create user via Gmail
-        const email = profile.email.toLowerCase();
-        let user = await db.user.findUnique({
-          where: { email },
-          include: { member: true },
-        });
-
-        if (!user) {
-          // Check if this Gmail matches a Member record phone/names or if we need to auto-link
-          // During first signup via Google, we'll try to find a member with this email address
-          const member = await db.member.findFirst({
-            where: {
-              user: {
-                email: email
-              }
-            }
-          });
-
-          // Create standard user account
-          user = await db.user.create({
-            data: {
-              email,
-              role: 'MEMBER',
-              memberId: member?.id || null,
-            },
-            include: { member: true },
-          });
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          role: user.role,
-          memberId: user.memberId || null,
-          name: user.member?.names || profile.name || email.split('@')[0],
-        };
-      },
-    })
-  );
-}
 
 export const authOptions: NextAuthOptions = {
   providers,
@@ -114,7 +86,7 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: 'jwt',
   },
-  secret: process.env.NEXTAUTH_SECRET || 'tsa-website-super-secret-key-12345',
+  secret: NEXTAUTH_SECRET,
 };
 
 declare module 'next-auth' {

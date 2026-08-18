@@ -21,3 +21,12 @@ node_modules/
 
 # Scratch / Temporary scripts
 scratch/
+
+# Build artefacts
+tsconfig.tsbuildinfo
+
+# Data import working files
+import-report-*.json
+unmatched.csv
+backfill-unparsed.json
+*.mbox

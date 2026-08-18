@@ -106,7 +106,7 @@ export async function approveSubmission(submissionId: string) {
       const names = `${payload.firstName} ${payload.lastName}`;
 
       // Aggregate parents/relations
-      const parents = [];
+      const parents: string[] = [];
       if (payload.fatherName) parents.push(payload.fatherName);
       if (payload.motherName) parents.push(payload.motherName);
 

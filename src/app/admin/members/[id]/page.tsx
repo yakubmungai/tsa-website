@@ -53,7 +53,7 @@ export default async function AdminMemberDetailPage({ params }: { params: Promis
             </CardHeader>
             <CardContent>
               <p className="text-slate-600 text-sm mb-4">
-                We could not find a member profile with ID {params.id}.
+                We could not find a member profile with ID {id}.
               </p>
               <Button asChild>
                 <Link href="/admin/members">Return to Directory</Link>
