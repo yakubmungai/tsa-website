@@ -41,6 +41,7 @@ model Member {
   id              String             @id @default(uuid())
   names           String             // Full name
   phone           String?            // Primary phone
+  archivedAt      DateTime?          // Soft delete. Financial history must survive.
   address         String?            // Full address
   husbandWife     String?            // Spouse name
   spousePhone     String?
@@ -56,13 +57,18 @@ model Member {
   user            User?
   transactions    Transaction[]
   submissions     FormSubmission[]
+
+  @@index([archivedAt])
 }
 
 // Transaction history for auditing balances
 model Transaction {
   id          String   @id @default(uuid())
   memberId    String
-  member      Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  // Restrict, not Cascade: deleting a member must never silently erase their
+  // financial history. Members are archived instead (Member.archivedAt), and
+  // the KATIBA (Art 6.1) gives every member the right to inspect these records.
+  member      Member   @relation(fields: [memberId], references: [id], onDelete: Restrict)
   amount      Decimal  @db.Decimal(10, 2)
   type        String   // "ADVANCE", "REGISTRATION", "MEMBERSHIP", "OTHER"
   description String?
@@ -86,4 +92,38 @@ enum Status {
   PROCESSING
   APPROVED
   REJECTED
+}
+
+/// Append-only record of who did what.
+///
+/// KATIBA Art 6.1 gives every member the right to inspect the association's
+/// records, so these entries must outlive the rows they describe. Actor and
+/// target are stored as plain ids with a denormalised label rather than as
+/// foreign keys, so no cascade or deletion can ever remove the evidence.
+///
+/// Never update or delete rows in this table.
+model AuditLog {
+  id           String   @id @default(uuid())
+  createdAt    DateTime @default(now())
+
+  // Who actually acted.
+  actorUserId  String?
+  actorLabel   String   // snapshot, e.g. "amina@example.com (ADMIN)"
+  actorRole    String?
+
+  // On whose behalf, when acting under a delegation.
+  onBehalfOfMemberId String?
+
+  action       String   // MEMBER_ARCHIVED, TRANSACTION_POSTED, ...
+  entityType   String
+  entityId     String
+  summary      String
+  metadata     Json?    // before/after diff, or a full snapshot for archives
+  ipHash       String?
+  success      Boolean  @default(true)
+  failureReason String?
+
+  @@index([entityType, entityId])
+  @@index([onBehalfOfMemberId, createdAt])
+  @@index([createdAt])
 }

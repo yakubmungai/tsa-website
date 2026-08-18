@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
+import { writeAudit } from '@/lib/audit';
 
 // Middleware check for admin authentication
 async function verifyAdmin() {
@@ -72,20 +73,101 @@ export async function updateMemberDetails(memberId: string, data: any) {
   }
 }
 
-// Delete a member profile
-export async function deleteMember(memberId: string) {
+/**
+ * Archive a member (soft delete).
+ *
+ * This used to be `db.member.delete()`, which cascaded to Transaction and User
+ * — one click erased a member's entire financial history with no record. The
+ * KATIBA (Art 6.1) gives members the right to inspect these records, and the
+ * association needs them for its own reporting, so the row is retained and
+ * hidden instead.
+ *
+ * The caller must confirm by typing the member's exact name, so this cannot be
+ * triggered by a stray click on the wrong row.
+ */
+export async function archiveMember(memberId: string, confirmName: string) {
   try {
     await verifyAdmin();
 
-    await db.member.delete({
+    const member = await db.member.findUnique({
       where: { id: memberId },
+      include: { _count: { select: { transactions: true, submissions: true } } },
+    });
+
+    if (!member) {
+      return { success: false, error: 'Member not found.' };
+    }
+    if (member.archivedAt) {
+      return { success: false, error: 'This member is already archived.' };
+    }
+
+    const normalise = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();
+    if (normalise(confirmName) !== normalise(member.names)) {
+      return {
+        success: false,
+        error: `Name did not match. Type "${member.names}" exactly to archive this member.`,
+      };
+    }
+
+    await db.$transaction(async (tx) => {
+      await tx.member.update({
+        where: { id: memberId },
+        data: { archivedAt: new Date() },
+      });
+
+      // Revoke the login, so an archived member cannot sign in. The member row
+      // and every transaction stay exactly where they are.
+      await tx.user.deleteMany({ where: { memberId } });
+
+      await writeAudit({
+        tx,
+        action: 'MEMBER_ARCHIVED',
+        entityType: 'Member',
+        entityId: memberId,
+        summary: `Archived member ${member.names}`,
+        metadata: {
+          names: member.names,
+          phone: member.phone,
+          transactionCount: member._count.transactions,
+          submissionCount: member._count.submissions,
+        },
+      });
     });
 
     revalidatePath('/admin/members');
+    revalidatePath(`/admin/members/${memberId}`);
     return { success: true };
   } catch (err: any) {
-    console.error('Error deleting member:', err);
-    return { success: false, error: err.message || 'Failed to delete member.' };
+    console.error('Error archiving member:', err);
+    return { success: false, error: 'Failed to archive member.' };
+  }
+}
+
+/** Undo an archive. */
+export async function restoreMember(memberId: string) {
+  try {
+    await verifyAdmin();
+
+    const member = await db.member.findUnique({ where: { id: memberId } });
+    if (!member) return { success: false, error: 'Member not found.' };
+
+    await db.$transaction(async (tx) => {
+      await tx.member.update({ where: { id: memberId }, data: { archivedAt: null } });
+      await writeAudit({
+        tx,
+        action: 'MEMBER_RESTORED',
+        entityType: 'Member',
+        entityId: memberId,
+        summary: `Restored member ${member.names}`,
+      });
+    });
+
+    revalidatePath('/admin/members');
+    revalidatePath(`/admin/members/${memberId}`);
+    return { success: true };
+  } catch (err: any) {
+    console.error('Error restoring member:', err);
+    return { success: false, error: 'Failed to restore member.' };
   }
 }
 

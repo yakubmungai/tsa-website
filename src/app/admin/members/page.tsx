@@ -18,6 +18,7 @@ export default async function AdminMembersPage() {
 
   // Fetch all members with transactions
   const membersRaw = await db.member.findMany({
+    where: { archivedAt: null },
     include: {
       transactions: true,
     },
