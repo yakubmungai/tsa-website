@@ -97,13 +97,14 @@ export default function NewMemberPage() {
       };
 
       const res = await createMember(payload);
-      if (res.success && res.memberId) {
+      if (res.success) {
         toast.success('Member created successfully!');
-        router.push(`/admin/members/${res.memberId}`);
+        router.push(`/admin/members/${res.data.memberId}`);
       } else {
-        toast.error(res.error || 'Failed to create member.');
+        const firstFieldError = Object.values(res.fieldErrors ?? {})[0]?.[0];
+        toast.error(firstFieldError ?? res.error);
       }
-    } catch (err) {
+    } catch {
       toast.error('An error occurred.');
     } finally {
       setLoading(false);

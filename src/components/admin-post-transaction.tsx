@@ -25,18 +25,15 @@ export function AdminPostTransaction({ memberId }: { memberId: string }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount || isNaN(Number(amount))) {
-      toast.error('Please enter a valid amount.');
-      return;
-    }
-    
     setLoading(true);
     try {
+      // The amount is validated and parsed into exact cents server-side; sending
+      // the raw text means "12.345" is rejected rather than quietly rounded.
       const res = await postTransaction({
         memberId,
-        amount: Number(amount),
+        amount,
         type,
-        description: description.trim() || `${type} Transaction`
+        description: description.trim() || `${type} Transaction`,
       });
 
       if (res.success) {
@@ -45,9 +42,9 @@ export function AdminPostTransaction({ memberId }: { memberId: string }) {
         setDescription('');
         setOpen(false);
       } else {
-        toast.error(res.error || 'Failed to post transaction.');
+        toast.error(res.fieldErrors?.amount?.[0] ?? res.error);
       }
-    } catch (err) {
+    } catch {
       toast.error('An error occurred.');
     } finally {
       setLoading(false);

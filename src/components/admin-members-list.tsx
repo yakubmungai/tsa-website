@@ -4,13 +4,13 @@ import { useState } from 'react';
 import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Search, Download, FileText, Plus } from 'lucide-react';
@@ -37,8 +37,8 @@ export function AdminMembersList({ initialMembers }: { initialMembers: MemberWit
 
   const filteredMembers = initialMembers.filter(member => {
     // Search filter
-    const matchesSearch = member.names.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          (member.phone && member.phone.includes(searchTerm));
+    const matchesSearch = member.names.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (member.phone && member.phone.includes(searchTerm));
 
     // Balance filter
     let matchesBalance = true;
@@ -82,7 +82,7 @@ export function AdminMembersList({ initialMembers }: { initialMembers: MemberWit
     XLSX.utils.book_append_sheet(workbook, worksheet, 'TSA Database');
 
     // Auto-fit column widths
-    const maxLens = Object.keys(dataToExport[0] || {}).map(key => 
+    const maxLens = Object.keys(dataToExport[0] || {}).map(key =>
       Math.max(key.length, ...dataToExport.map(row => String((row as any)[key]).length))
     );
     worksheet['!cols'] = maxLens.map(len => ({ wch: len + 3 }));
@@ -108,7 +108,7 @@ export function AdminMembersList({ initialMembers }: { initialMembers: MemberWit
     const autoTable = (await import('jspdf-autotable')).default;
 
     const doc = new jsPDF();
-    
+
     try {
       // Load and add TSA Logo
       const logoBase64 = await getBase64ImageFromUrl('/images/tsa-logo.png');
@@ -122,13 +122,13 @@ export function AdminMembersList({ initialMembers }: { initialMembers: MemberWit
     doc.setFontSize(15);
     doc.setTextColor(16, 124, 65); // Emerald green theme
     doc.text('TANZANIA SHARING ASSOCIATION (TSA)', 35, 19);
-    
+
     // Add subtitle
     doc.setFontSize(11);
     doc.setFont('Helvetica', 'normal');
     doc.setTextColor(100, 116, 139); // Slate-500
     doc.text('Official Member Balance Statement', 35, 25);
-    
+
     // Add date
     const dateStr = new Date().toLocaleDateString('en-US', {
       year: 'numeric',
@@ -137,11 +137,11 @@ export function AdminMembersList({ initialMembers }: { initialMembers: MemberWit
     });
     doc.setFontSize(8.5);
     doc.text(`Generated on: ${dateStr}`, 35, 31);
-    
+
     // Header divider line
     doc.setDrawColor(226, 232, 240);
     doc.line(14, 37, 196, 37);
-    
+
     // Sort members alphabetically for public listing
     const sortedMembers = [...filteredMembers].sort((a, b) => a.names.localeCompare(b.names));
     const tableRows = sortedMembers.map((m, idx) => [
@@ -149,7 +149,7 @@ export function AdminMembersList({ initialMembers }: { initialMembers: MemberWit
       m.names,
       m.balance >= 0 ? `+$${m.balance.toFixed(2)}` : `-$${Math.abs(m.balance).toFixed(2)}`
     ]);
-    
+
     // Build the table
     autoTable(doc, {
       startY: 43,
@@ -184,7 +184,7 @@ export function AdminMembersList({ initialMembers }: { initialMembers: MemberWit
         }
       }
     });
-    
+
     doc.save(`TSA_Member_Balances_Statement_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
@@ -212,14 +212,14 @@ export function AdminMembersList({ initialMembers }: { initialMembers: MemberWit
           </Button>
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-6 pt-6 font-sans">
         {/* Search and Filters */}
         <div className="flex flex-col md:flex-row gap-4 items-center">
           <div className="relative w-full md:w-80">
             <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-            <Input 
-              placeholder="Search by name or phone..." 
+            <Input
+              placeholder="Search by name or phone..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -227,32 +227,32 @@ export function AdminMembersList({ initialMembers }: { initialMembers: MemberWit
           </div>
 
           <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
-            <Button 
-              variant={balanceFilter === 'all' ? 'default' : 'outline'} 
+            <Button
+              variant={balanceFilter === 'all' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setBalanceFilter('all')}
               className="text-xs font-semibold"
             >
               All ({initialMembers.length})
             </Button>
-            <Button 
-              variant={balanceFilter === 'debt' ? 'default' : 'outline'} 
+            <Button
+              variant={balanceFilter === 'debt' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setBalanceFilter('debt')}
               className="text-xs font-semibold"
             >
               Outstanding Dues ({initialMembers.filter(m => m.balance < 0).length})
             </Button>
-            <Button 
-              variant={balanceFilter === 'credit' ? 'default' : 'outline'} 
+            <Button
+              variant={balanceFilter === 'credit' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setBalanceFilter('credit')}
               className="text-xs font-semibold"
             >
               Advance Credit ({initialMembers.filter(m => m.balance > 0).length})
             </Button>
-            <Button 
-              variant={balanceFilter === 'paid' ? 'default' : 'outline'} 
+            <Button
+              variant={balanceFilter === 'paid' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setBalanceFilter('paid')}
               className="text-xs font-semibold"

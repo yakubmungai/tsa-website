@@ -1,10 +1,14 @@
 'use server';
 
+import { z } from 'zod';
 import { db } from '@/lib/db';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { writeAudit } from '@/lib/audit';
+import { defineAction, actionError } from '@/lib/action';
+import { formatUSD } from '@/lib/money';
+import { memberFormSchema, postTransactionSchema } from '@/lib/validations';
 
 // Middleware check for admin authentication
 async function verifyAdmin() {
@@ -14,64 +18,117 @@ async function verifyAdmin() {
   }
 }
 
-// Post a new transaction ledger record to update a member's balance
-export async function postTransaction(values: {
-  memberId: string;
-  amount: number;
-  type: 'ADVANCE' | 'REGISTRATION' | 'MEMBERSHIP' | 'OTHER';
-  description: string;
-}) {
-  try {
-    await verifyAdmin();
-    const { memberId, amount, type, description } = values;
+/**
+ * Post a ledger entry against a member.
+ *
+ * The amount arrives from a free-text box, so it is parsed into integer cents
+ * and range-checked before it reaches a Decimal(10,2) column. Previously
+ * `Number(amount)` was passed straight through, so "abc" became NaN and
+ * "999999999999" surfaced as a raw Prisma error in the browser.
+ */
+export const postTransaction = defineAction({
+  name: 'postTransaction',
+  guard: 'admin',
+  schema: postTransactionSchema,
+  async handler(input): Promise<{ transactionId: string; memberName: string }> {
+    const member = await db.member.findUnique({
+      where: { id: input.memberId },
+      select: { id: true, names: true, archivedAt: true },
+    });
+    if (!member) actionError('Member not found.');
+    if (member.archivedAt) actionError('Cannot post to an archived member.');
 
-    await db.transaction.create({
-      data: {
-        memberId,
-        amount,
-        type,
-        description,
-      },
+    // The ledger row and its audit entry commit together, so money can never
+    // move without a record of who moved it.
+    const created = await db.$transaction(async (tx) => {
+      const row = await tx.transaction.create({
+        data: {
+          memberId: input.memberId,
+          // Decimal column: hand it an exact decimal string, never a float.
+          amount: (input.amount / 100).toFixed(2),
+          type: input.type,
+          description: input.description || null,
+        },
+        select: { id: true },
+      });
+
+      await writeAudit({
+        tx,
+        action: 'TRANSACTION_POSTED',
+        entityType: 'Transaction',
+        entityId: row.id,
+        onBehalfOfMemberId: input.memberId,
+        summary: `Posted ${formatUSD(input.amount, { sign: 'always' })} (${input.type}) to ${member.names}`,
+        metadata: {
+          amountCents: input.amount,
+          type: input.type,
+          description: input.description,
+        },
+      });
+
+      return row;
     });
 
-    revalidatePath(`/admin/members/${memberId}`);
+    revalidatePath(`/admin/members/${input.memberId}`);
     revalidatePath('/portal');
-    return { success: true };
-  } catch (err: any) {
-    console.error('Error posting transaction:', err);
-    return { success: false, error: err.message || 'Failed to post transaction.' };
-  }
-}
+    return { transactionId: created.id, memberName: member.names };
+  },
+});
 
-// Update a member's profile details
-export async function updateMemberDetails(memberId: string, data: any) {
-  try {
-    await verifyAdmin();
+/** Update a member's profile and family details. */
+export const updateMemberDetails = defineAction({
+  name: 'updateMemberDetails',
+  guard: 'admin',
+  schema: memberFormSchema.extend({ memberId: z.string().uuid() }),
+  async handler(input): Promise<{ memberId: string; changedFields: string[] }> {
+    const { memberId, ...fields } = input;
 
-    await db.member.update({
-      where: { id: memberId },
-      data: {
-        names: data.names,
-        phone: data.phone,
-        address: data.address,
-        husbandWife: data.husbandWife,
-        spousePhone: data.spousePhone,
-        parents: data.parents || [],
-        children: data.children || [],
-        siblings: data.siblings || [],
-        witnesses: data.witnesses || [],
-        nextOfKin: data.nextOfKin || [],
-      },
+    const existing = await db.member.findUnique({ where: { id: memberId } });
+    if (!existing) actionError('Member not found.');
+
+    // Record which fields actually changed, so the audit trail is reviewable
+    // rather than a wall of identical "updated" entries.
+    const changedFields = (Object.keys(fields) as (keyof typeof fields)[]).filter((key) => {
+      const before = JSON.stringify((existing as Record<string, unknown>)[key] ?? null);
+      const after = JSON.stringify(fields[key] ?? null);
+      return before !== after;
+    });
+
+    await db.$transaction(async (tx) => {
+      await tx.member.update({
+        where: { id: memberId },
+        data: {
+          names: fields.names,
+          phone: fields.phone ?? null,
+          address: fields.address ?? null,
+          husbandWife: fields.husbandWife ?? null,
+          spousePhone: fields.spousePhone ?? null,
+          parents: fields.parents,
+          children: fields.children,
+          siblings: fields.siblings,
+          witnesses: fields.witnesses,
+          nextOfKin: fields.nextOfKin,
+        },
+      });
+
+      if (changedFields.length > 0) {
+        await writeAudit({
+          tx,
+          action: 'MEMBER_UPDATED',
+          entityType: 'Member',
+          entityId: memberId,
+          onBehalfOfMemberId: memberId,
+          summary: `Updated ${changedFields.join(', ')} for ${fields.names}`,
+          metadata: { changedFields },
+        });
+      }
     });
 
     revalidatePath(`/admin/members/${memberId}`);
     revalidatePath('/admin/members');
-    return { success: true };
-  } catch (err: any) {
-    console.error('Error updating member details:', err);
-    return { success: false, error: err.message || 'Failed to update details.' };
-  }
-}
+    return { memberId, changedFields };
+  },
+});
 
 /**
  * Archive a member (soft delete).
@@ -255,30 +312,43 @@ export async function rejectSubmission(submissionId: string) {
   }
 }
 
-// Create a new member profile from scratch
-export async function createMember(data: any) {
-  try {
-    await verifyAdmin();
+/** Create a member profile from scratch. */
+export const createMember = defineAction({
+  name: 'createMember',
+  guard: 'admin',
+  schema: memberFormSchema,
+  async handler(input): Promise<{ memberId: string }> {
+    const created = await db.$transaction(async (tx) => {
+      const member = await tx.member.create({
+        data: {
+          names: input.names,
+          phone: input.phone ?? null,
+          address: input.address ?? null,
+          husbandWife: input.husbandWife ?? null,
+          spousePhone: input.spousePhone ?? null,
+          parents: input.parents,
+          children: input.children,
+          siblings: input.siblings,
+          witnesses: input.witnesses,
+          nextOfKin: input.nextOfKin,
+        },
+        select: { id: true },
+      });
 
-    const newMember = await db.member.create({
-      data: {
-        names: data.names,
-        phone: data.phone || null,
-        address: data.address || null,
-        husbandWife: data.husbandWife || null,
-        spousePhone: data.spousePhone || null,
-        parents: data.parents || [],
-        children: data.children || [],
-        siblings: data.siblings || [],
-        witnesses: data.witnesses || [],
-        nextOfKin: data.nextOfKin || [],
-      },
+      await writeAudit({
+        tx,
+        action: 'MEMBER_CREATED',
+        entityType: 'Member',
+        entityId: member.id,
+        onBehalfOfMemberId: member.id,
+        summary: `Created member ${input.names}`,
+        metadata: { names: input.names, phone: input.phone ?? null },
+      });
+
+      return member;
     });
 
     revalidatePath('/admin/members');
-    return { success: true, memberId: newMember.id };
-  } catch (err: any) {
-    console.error('Error creating member:', err);
-    return { success: false, error: err.message || 'Failed to create member.' };
-  }
-}
+    return { memberId: created.id };
+  },
+});

@@ -13,11 +13,7 @@ export function MembershipSection() {
   const t = translations[language].membershipSection
 
   return (
-    <section id="membership" className="relative py-24 md:py-32 bg-muted overflow-hidden">
-      {/* decorative gradient blob */}
-      <div className="absolute -top-32 -right-32 h-96 w-96 rounded-full bg-primary/5 blur-3xl" />
-      <div className="absolute -bottom-32 -left-32 h-96 w-96 rounded-full bg-secondary/5 blur-3xl" />
-
+    <section id="membership" className="relative overflow-hidden py-24 md:py-32">
       <div ref={ref} className={`relative mx-auto max-w-7xl px-6 ${isVisible ? "animate-fade-in-up" : "opacity-0"}`}>
         <div className="overflow-hidden rounded-3xl border border-border/50 bg-card/80 backdrop-blur-sm shadow-xl">
           <div className="grid lg:grid-cols-2">

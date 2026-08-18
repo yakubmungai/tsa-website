@@ -100,7 +100,8 @@ export function AdminEditMember({ member }: EditMemberProps) {
 
     setLoading(true);
     try {
-      const payload = {
+      const res = await updateMemberDetails({
+        memberId: member.id,
         names,
         phone,
         address,
@@ -111,16 +112,16 @@ export function AdminEditMember({ member }: EditMemberProps) {
         siblings: siblings.filter(s => s.trim() !== ''),
         witnesses: witnesses.filter(w => w.name.trim() !== ''),
         nextOfKin: nextOfKin.filter(n => n.name.trim() !== ''),
-      };
+      });
 
-      const res = await updateMemberDetails(member.id, payload);
       if (res.success) {
         toast.success('Profile details updated!');
         setOpen(false);
       } else {
-        toast.error(res.error || 'Failed to update details.');
+        const firstFieldError = Object.values(res.fieldErrors ?? {})[0]?.[0];
+        toast.error(firstFieldError ?? res.error);
       }
-    } catch (err) {
+    } catch {
       toast.error('An error occurred.');
     } finally {
       setLoading(false);
