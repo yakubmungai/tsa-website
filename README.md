@@ -144,6 +144,64 @@ SELECT sum(amount) FROM "Transaction";-- must match the treasurer's total
 
 ---
 
+## Leaders' test environment
+
+A separate deployment where the board can exercise the portal against invented
+data before it is opened to members.
+
+### Setting it up
+
+1. **A separate database.** On Neon, create a branch or a second project. It must
+   not be the production database — the seed deletes everything.
+2. **Environment variables** for that deployment:
+   ```
+   DEMO_MODE=true
+   NEXT_PUBLIC_SITE_URL=https://<your-staging-host>
+   DATABASE_URL=<the separate database>
+   NEXTAUTH_SECRET=<a different secret from production>
+   ADMIN_EMAIL=<a developer address, never tansha.hq@gmail.com>
+   ```
+3. **Seed it:** `npm run seed:demo`
+4. **Turn on Vercel Deployment Protection** so the staging URL is not public or
+   indexed.
+
+### What protects the live site
+
+- `isDemoMode()` **throws** if `DEMO_MODE` is set while `NEXT_PUBLIC_SITE_URL`
+  points at `tansha.org`. A misconfigured deployment fails loudly instead of
+  quietly showing demo sign-in to members. The check is by hostname, not
+  `NODE_ENV`, because Vercel preview deployments also run `NODE_ENV=production`.
+- `npm run seed:demo` refuses unless `DEMO_MODE=true` and the host is not
+  production.
+- Demo accounts have **no password hash**. They are reachable only through the
+  `demo` auth provider, which is not registered unless demo mode is on.
+- The persona list reaches the sign-in component as props rather than an import,
+  so demo account identifiers are not in the production client bundle.
+
+### Signing in
+
+`/login` shows four one-tap roles: Administrator, a member in good standing, a
+member in arrears, and a member who helps a relative. No passwords.
+
+`/admin/demo` has a bilingual walkthrough and **Reset demo data**, which rebuilds
+the roster exactly as it started so a scenario can be run again.
+
+### The demo roster
+
+Twelve invented members covering all four KATIBA Art 18.9 standing tiers, so
+each one's benefit entitlement can be checked against the constitution:
+
+| Tier | Standing | Death / hardship entitlement | Members |
+|---|---|---|---|
+| FULL | $125+ | $10,000 / $3,000 | 5 |
+| REDUCED | advance under $100 | $5,000 / $1,500 | 3 |
+| MINIMAL | dues only, no advance | $2,000 / $500 | 3 |
+| VOLUNTARY | nothing on account | kihiari only | 1 |
+
+It also includes a couple sharing one handset — six pairs do this in the real
+roster — and a member in arrears, since most of the real membership will see a
+shortfall on day one.
+
 ## Known issues
 
 - `src/components/language-context.tsx` sets state synchronously in an effect
