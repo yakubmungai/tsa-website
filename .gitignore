@@ -30,3 +30,5 @@ import-report-*.json
 unmatched.csv
 backfill-unparsed.json
 *.mbox
+# Local data exports (never commit member data)
+tsa-pre-demo-backup-*.json

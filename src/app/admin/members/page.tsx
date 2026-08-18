@@ -6,8 +6,9 @@ import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
 import { AdminMembersList } from '@/components/admin-members-list';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { Users, FileSpreadsheet, Hourglass, ShieldAlert } from 'lucide-react';
+import { Users, FileSpreadsheet, Hourglass, ShieldAlert, FlaskConical } from 'lucide-react';
 import Link from 'next/link';
+import { isDemoMode } from '@/lib/demo';
 
 export default async function AdminMembersPage() {
   const session = await getServerSession(authOptions);
@@ -66,8 +67,17 @@ export default async function AdminMembersPage() {
             <p className="text-slate-500 text-sm">Tanzania Sharing Association • Central Management Portal</p>
           </div>
           <div className="flex gap-2">
-            <Link 
-              href="/admin/forms" 
+            {isDemoMode() && (
+              <Link
+                href="/admin/demo"
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-amber-950 rounded-lg text-sm font-semibold transition flex items-center gap-2"
+              >
+                <FlaskConical className="h-4 w-4" />
+                Mwongozo wa Majaribio
+              </Link>
+            )}
+            <Link
+              href="/admin/forms"
               className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm font-semibold transition flex items-center gap-2"
             >
               <Hourglass className="h-4 w-4" />
