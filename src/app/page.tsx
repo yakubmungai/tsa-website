@@ -3,6 +3,7 @@ import { HeroSection } from "@/components/hero-section"
 import { AboutSection } from "@/components/about-section"
 import { ProgramsSection } from "@/components/programs-section"
 import { ImpactSection } from "@/components/impact-section"
+import { LeadersSection } from "@/components/leaders-section"
 
 import { MembershipSection } from "@/components/membership-section"
 
@@ -17,6 +18,7 @@ export default function Page() {
         <AboutSection />
         <ProgramsSection />
         <ImpactSection />
+        <LeadersSection />
 
         <MembershipSection />
       </main>

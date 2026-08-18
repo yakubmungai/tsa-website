@@ -13,6 +13,7 @@ import { translations } from "@/lib/translations"
 const navLinks = (t: any) => [
   { label: t.about, href: "/#about" },
   { label: t.programs, href: "/#programs" },
+  { label: t.ourTeam, href: "/#leaders" },
   { label: t.events, href: "/events" },
   { label: t.forms, href: "/forms" },
   { label: t.blog, href: "/blog" },
@@ -68,7 +69,7 @@ export function Navbar() {
           </span>
         </a>
 
-        <nav className="hidden items-center gap-8 md:flex">
+        <nav className="hidden items-center gap-6 md:flex lg:gap-8">
           {navLinks(t).map((link) => (
             <a
               key={link.href}

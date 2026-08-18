@@ -4,6 +4,7 @@ export interface TranslationSchema {
   nav: {
     about: string;
     programs: string;
+    ourTeam: string;
     events: string;
     forms: string;
     blog: string;
@@ -38,6 +39,16 @@ export interface TranslationSchema {
       distributed: { value: string; label: string };
       families: { value: string; label: string };
       cities: { value: string; label: string };
+    };
+  };
+  leaders: {
+    badge: string;
+    title: string;
+    description: string;
+    roles: {
+      chairperson: string;
+      secretary: string;
+      treasurer: string;
     };
   };
   membershipSection: {
@@ -210,6 +221,7 @@ export const translations: Record<Language, TranslationSchema> = {
     nav: {
       about: "About",
       programs: "Programs",
+      ourTeam: "Our Team",
       events: "Events",
       forms: "Forms",
       blog: "Blog",
@@ -256,6 +268,16 @@ export const translations: Record<Language, TranslationSchema> = {
         distributed: { value: "$50K+", label: "Distributed in mutual aid" },
         families: { value: "25+", label: "Families supported" },
         cities: { value: "10+", label: "US states represented" },
+      },
+    },
+    leaders: {
+      badge: "Our Team",
+      title: "The People Serving Our Community",
+      description: "Our elected leaders volunteer their time to steward the association, uphold our Constitution, and make sure every member is supported.",
+      roles: {
+        chairperson: "Chairperson",
+        secretary: "Secretary",
+        treasurer: "Treasurer",
       },
     },
     membershipSection: {
@@ -470,6 +492,7 @@ export const translations: Record<Language, TranslationSchema> = {
     nav: {
       about: "Kuhusu",
       programs: "Mipango",
+      ourTeam: "Timu Yetu",
       events: "Matukio",
       forms: "Fomu",
       blog: "Blogu",
@@ -516,6 +539,16 @@ export const translations: Record<Language, TranslationSchema> = {
         distributed: { value: "$50K+", label: "Zilizosambazwa katika msaada wa pamoja" },
         families: { value: "25+", label: "Familia zilizosaidiwa" },
         cities: { value: "10+", label: "Majimbo ya Marekani yanayowakilishwa" },
+      },
+    },
+    leaders: {
+      badge: "Timu Yetu",
+      title: "Watu Wanaohudumia Jamii Yetu",
+      description: "Viongozi wetu waliochaguliwa hutoa muda wao kuiongoza jumuiya, kusimamia Katiba yetu, na kuhakikisha kila mwanachama anapata msaada.",
+      roles: {
+        chairperson: "Mwenyekiti",
+        secretary: "Katibu",
+        treasurer: "Mweka Hazina",
       },
     },
     membershipSection: {
