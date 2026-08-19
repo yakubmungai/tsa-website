@@ -6,7 +6,7 @@ import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
 import { AdminMembersList } from '@/components/admin-members-list';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { Users, FileSpreadsheet, Hourglass, ShieldAlert, FlaskConical } from 'lucide-react';
+import { Users, FileSpreadsheet, Hourglass, ShieldAlert, FlaskConical, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { isDemoMode } from '@/lib/demo';
 
@@ -76,6 +76,13 @@ export default async function AdminMembersPage() {
                 Mwongozo wa Majaribio
               </Link>
             )}
+            <Link
+              href="/admin/broadcast"
+              className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-sm font-semibold transition flex items-center gap-2"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Matangazo
+            </Link>
             <Link
               href="/admin/forms"
               className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm font-semibold transition flex items-center gap-2"
