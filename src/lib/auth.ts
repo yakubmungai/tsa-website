@@ -150,16 +150,54 @@ if (isDemoMode()) {
   );
 }
 
+/**
+ * Confirm an acting-session id really belongs to this user and is still open,
+ * before it is written into the token. Returns null if not.
+ */
+async function validateActingSessionId(
+  actingSessionId: string,
+  userId: string
+): Promise<string | null> {
+  const acting = await db.actingSession.findUnique({
+    where: { id: actingSessionId },
+    include: { delegation: { select: { status: true, expiresAt: true } } },
+  });
+
+  const valid =
+    acting &&
+    acting.actorUserId === userId &&
+    acting.endedAt === null &&
+    acting.expiresAt > new Date() &&
+    acting.delegation.status === 'ACTIVE' &&
+    (acting.delegation.expiresAt === null || acting.delegation.expiresAt > new Date());
+
+  return valid ? acting.id : null;
+}
+
 export const authOptions: NextAuthOptions = {
   providers,
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
         token.role = (user as any).role;
         token.memberId = (user as any).memberId;
         token.ver = (user as any).sessionVersion ?? 0;
+        token.actingSessionId = null;
       }
+
+      // Switching into or out of acting-on-behalf-of. The value from the client
+      // is untrusted: it is re-checked against the database before being
+      // written to the token, and re-checked again on every request in
+      // getEffectiveContext().
+      if (trigger === 'update') {
+        const requested = (session as { actingSessionId?: string | null } | undefined)
+          ?.actingSessionId;
+        token.actingSessionId = requested
+          ? await validateActingSessionId(String(requested), token.id as string)
+          : null;
+      }
+
       return token;
     },
     async session({ session, token }) {
@@ -191,6 +229,8 @@ export const authOptions: NextAuthOptions = {
       session.user.role = user.role;
       session.user.memberId = user.memberId;
       session.user.name = user.member?.names ?? user.email ?? null;
+      (session as { actingSessionId?: string | null }).actingSessionId =
+        (token.actingSessionId as string | null) ?? null;
       return session;
     },
   },
@@ -205,6 +245,8 @@ export const authOptions: NextAuthOptions = {
 
 declare module 'next-auth' {
   interface Session {
+    /** Open acting-on-behalf-of session, re-validated on every request. */
+    actingSessionId?: string | null;
     user: {
       id: string;
       // Nullable: members who sign in by phone may never supply an email.

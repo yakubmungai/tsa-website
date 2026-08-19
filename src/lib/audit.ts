@@ -35,7 +35,11 @@ export type AuditAction =
   | 'LOGIN_SUCCEEDED'
   | 'LOGIN_FAILED'
   | 'ACCOUNT_CLAIMED'
-  | 'ACCOUNT_REVOKED';
+  | 'ACCOUNT_REVOKED'
+  // delegation
+  | 'DELEGATION_GRANTED'
+  | 'DELEGATION_REVOKED'
+  | 'ACTING_SESSION_STARTED';
 
 interface WriteAuditInput {
   action: AuditAction;

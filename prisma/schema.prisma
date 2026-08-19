@@ -35,6 +35,9 @@ model User {
   memberId     String?   @unique
   member       Member?   @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
+  delegationsHeld Delegation[]    @relation("DelegationDelegate")
+  actingSessions  ActingSession[] @relation("ActingActor")
+
   @@index([phoneE164])
 }
 
@@ -91,6 +94,7 @@ model Member {
   user            User?
   transactions    Transaction[]
   submissions     FormSubmission[]
+  delegationsGranted Delegation[] @relation("DelegationOwner")
 
   @@index([archivedAt])
   @@index([phoneE164])
@@ -219,6 +223,97 @@ enum MemberStatus {
   SUSPENDED
   INACTIVE
   DECEASED
+}
+
+enum DelegationStatus {
+  PENDING_OWNER_APPROVAL
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum DelegationOrigin {
+  /// The member set it up themselves and approved with a code to their phone.
+  SELF_SERVICE
+  /// An officer set it up for a member who does not use the portal.
+  ADMIN_PROVISIONED
+}
+
+enum DelegationPermission {
+  VIEW_FINANCES
+  MAKE_PAYMENTS
+  SUBMIT_FORMS
+  EDIT_PROFILE
+}
+
+/// Permission for one person to act on another member's behalf.
+///
+/// Some members already manage relatives' TSA affairs — an older member's
+/// daughter, a spouse. This makes that sanctioned and auditable instead of
+/// happening by sharing a login.
+model Delegation {
+  id            String   @id @default(uuid())
+
+  /// Whose account is being accessed.
+  ownerMemberId String
+  ownerMember   Member   @relation("DelegationOwner", fields: [ownerMemberId], references: [id], onDelete: Cascade)
+
+  /// Who may access it. Null until they first sign in and accept.
+  delegateUserId String?
+  delegateUser   User?   @relation("DelegationDelegate", fields: [delegateUserId], references: [id], onDelete: Cascade)
+  /// The invitation is always addressed to a phone number.
+  delegatePhoneE164 String
+  delegateName      String
+  relationship      String?  // "daughter", "spouse", "neighbour"
+
+  permissions DelegationPermission[]
+  status      DelegationStatus @default(PENDING_OWNER_APPROVAL)
+  origin      DelegationOrigin
+
+  // Consent trail. An admin-provisioned grant must say how consent was given.
+  createdByUserId    String?
+  authorizedByUserId String?
+  authorizationNote  String?
+  ownerConsentAt     DateTime?
+  ownerConsentMethod String?   // "PHONE_CODE" | "IN_PERSON" | "WRITTEN"
+
+  expiresAt DateTime?
+  revokedAt DateTime?
+  revokedByUserId String?
+  revokedReason   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  actingSessions ActingSession[]
+
+  @@unique([ownerMemberId, delegatePhoneE164])
+  @@index([ownerMemberId, status])
+  @@index([delegateUserId, status])
+  @@index([delegatePhoneE164, status])
+}
+
+/// An open period during which someone is acting on another member's behalf.
+///
+/// The JWT carries only this row's id. Everything that matters is re-read from
+/// here on each request, so revoking a delegation takes effect on the delegate's
+/// very next request rather than whenever their token happens to expire.
+model ActingSession {
+  id           String   @id @default(uuid())
+  delegationId String
+  delegation   Delegation @relation(fields: [delegationId], references: [id], onDelete: Cascade)
+
+  actorUserId   String
+  actorUser     User   @relation("ActingActor", fields: [actorUserId], references: [id], onDelete: Cascade)
+  ownerMemberId String
+
+  startedAt   DateTime  @default(now())
+  expiresAt   DateTime
+  endedAt     DateTime?
+  endedReason String?   // USER_EXIT | REVOKED | EXPIRED | LOGOUT
+
+  @@index([actorUserId, endedAt])
+  @@index([ownerMemberId, endedAt])
 }
 
 enum Status {

@@ -1,6 +1,6 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getEffectiveContext } from '@/lib/session';
 import { db } from '@/lib/db';
+import { AccountSwitcher } from '@/components/account-switcher';
 import { redirect } from 'next/navigation';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
@@ -20,18 +20,34 @@ import {
 import Link from 'next/link';
 
 export default async function PortalPage() {
-  const session = await getServerSession(authOptions);
+  const ctx = await getEffectiveContext();
 
-  if (!session || !session.user) {
+  if (!ctx) {
     redirect('/login');
   }
 
   // Pure admins don't have member profiles
-  if (session.user.role === 'ADMIN' && !session.user.memberId) {
+  if (ctx.actor.role === 'ADMIN' && !ctx.memberId) {
     redirect('/admin/members');
   }
 
-  const memberId = session.user.memberId;
+  // Accounts this user can act for, so a helper can switch between them.
+  const switchable = ctx.isActing
+    ? []
+    : (
+        await db.delegation.findMany({
+          where: { delegateUserId: ctx.actor.id, status: 'ACTIVE' },
+          include: { ownerMember: { select: { id: true, names: true } } },
+          orderBy: { createdAt: 'asc' },
+        })
+      ).map((d) => ({
+        delegationId: d.id,
+        memberId: d.ownerMember.id,
+        names: d.ownerMember.names,
+      }));
+
+  // The effective member — the user's own, or the one they are helping.
+  const memberId = ctx.memberId;
   if (!memberId) {
     return (
       <div className="flex flex-col min-h-screen bg-slate-50">
@@ -230,6 +246,8 @@ export default async function PortalPage() {
 
           {/* Side Column - Profile & Form Quick Access */}
           <div className="space-y-6">
+            {switchable.length > 0 ? <AccountSwitcher accounts={switchable} /> : null}
+
             {/* Quick Actions */}
             <Card className="shadow-md bg-white border border-slate-100">
               <CardHeader>
@@ -244,6 +262,15 @@ export default async function PortalPage() {
                   </span>
                   <ChevronRight className="h-4 w-4 text-slate-400" />
                 </Link>
+                {!ctx.isActing ? (
+                  <Link href="/portal/access" className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 text-slate-700 transition">
+                    <span className="flex items-center text-sm font-semibold gap-2">
+                      <FileText className="h-4 w-4 text-emerald-600" />
+                      Wasaidizi wangu / My helpers
+                    </span>
+                    <ChevronRight className="h-4 w-4 text-slate-400" />
+                  </Link>
+                ) : null}
                 <Link href="/membership" className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 text-slate-700 transition">
                   <span className="flex items-center text-sm font-semibold gap-2">
                     <FileText className="h-4 w-4 text-emerald-600" />

@@ -114,6 +114,13 @@ async function signInExistingUser(userId: string, phoneE164: string): Promise<Ph
 
   await db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
 
+  // Grants are created against a phone number before that person has an
+  // account, so bind any waiting ones to this user now.
+  await db.delegation.updateMany({
+    where: { delegatePhoneE164: phoneE164, delegateUserId: null, status: 'ACTIVE' },
+    data: { delegateUserId: user.id },
+  });
+
   await writeAudit({
     action: 'LOGIN_SUCCEEDED',
     entityType: 'User',

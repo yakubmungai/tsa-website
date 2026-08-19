@@ -14,7 +14,8 @@
     "seed:demo": "tsx prisma/seed-demo.ts",
     "verify:phone-login": "tsx --conditions=react-server scripts/verify-phone-login.ts",
     "backfill:phones": "tsx scripts/backfill-phone-e164.ts",
-    "verify:forms": "tsx --conditions=react-server scripts/verify-form-submissions.ts"
+    "verify:forms": "tsx --conditions=react-server scripts/verify-form-submissions.ts",
+    "verify:delegation": "tsx --conditions=react-server scripts/verify-delegation.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
