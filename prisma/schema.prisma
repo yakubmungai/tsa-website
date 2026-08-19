@@ -63,6 +63,19 @@ model Member {
   /// NOT unique: spouses share a handset. See User.phoneE164.
   phoneE164       String?
   archivedAt      DateTime?          // Soft delete. Financial history must survive.
+
+  /// Collected by the application form and previously discarded on submit.
+  email             String?      @unique
+  dateOfBirth       DateTime?
+  placeOfBirth      String?
+  /// Human-facing number the treasurer's paper records use.
+  memberNumber      Int?         @unique
+  /// Admission date. Required by the constitution's six-month rule for new
+  /// members (Art 4.5), so it is recorded now even though nothing reads it yet.
+  joinedAt          DateTime?
+  joinedAtEstimated Boolean      @default(true)
+  status            MemberStatus @default(ACTIVE)
+  preferredLanguage String       @default("sw")
   address         String?            // Full address
   husbandWife     String?            // Spouse name
   spousePhone     String?
@@ -159,16 +172,53 @@ model Transaction {
   date        DateTime @default(now())
 }
 
-// Form submissions
+/// A form submitted from the public site or the portal.
+///
+/// Written to the database first, then emailed. Previously the four public
+/// forms only sent email, so every application anyone had ever submitted
+/// existed solely in a mailbox and the admin review queue was permanently
+/// empty.
 model FormSubmission {
   id         String   @id @default(uuid())
-  memberId   String?  // Nullable for guest/onboarding forms
+  /// Short human-quotable code, e.g. "TSA-F-4K2P9". A member who phones the
+  /// secretary can read this out.
+  reference  String   @unique
+  memberId   String?  // Null until linked to a member
   member     Member?  @relation(fields: [memberId], references: [id], onDelete: SetNull)
   formType   String   // "MEMBERSHIP", "CONSTITUTION", "FUNERAL_ASSISTANCE", "RENEWAL"
   status     Status   @default(PENDING)
-  data       Json     // Full form payload
+  data       Json     // Full validated payload, including fields no column holds
+
+  // Promoted out of `data` for the queue UI, search and duplicate detection.
+  submitterName  String?
+  submitterEmail String?
+  submitterPhone String?  // E.164 where it could be normalised
+  locale         String   @default("sw")
+
+  // Notification outcome. A failed email must not lose the submission.
+  emailSentAt DateTime?
+  emailError  String?
+
+  // Review trail
+  reviewedById String?
+  reviewedAt   DateTime?
+  reviewNote   String?
+
+  source     String   @default("web") // "web" | "portal" | "manual"
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([formType, status])
+  @@index([submitterPhone])
+}
+
+enum MemberStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  INACTIVE
+  DECEASED
 }
 
 enum Status {

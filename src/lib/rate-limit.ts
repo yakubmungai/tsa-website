@@ -48,6 +48,15 @@ export const POLICIES = {
   /** Password sign-in attempts. */
   loginPasswordEmail: { scope: 'login:password:email', limit: 10, windowMs: 15 * 60_000 },
   loginPasswordIp: { scope: 'login:password:ip', limit: 30, windowMs: 15 * 60_000 },
+
+  /**
+   * Public forms. Each one emails an officer, so without a limit they are a
+   * relay for spam — and the funeral notice form could be used to send fake
+   * bereavement notices to TSA's leadership.
+   */
+  publicFormIp: { scope: 'form:public:ip', limit: 5, windowMs: 24 * 60 * 60_000 },
+  publicFormPhone: { scope: 'form:public:phone', limit: 3, windowMs: 24 * 60 * 60_000 },
+  contactIp: { scope: 'form:contact:ip', limit: 3, windowMs: 60 * 60_000 },
 } as const satisfies Record<string, RateLimitPolicy>;
 
 function windowStartFor(windowMs: number, now: number): Date {

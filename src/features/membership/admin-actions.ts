@@ -9,6 +9,11 @@ import { writeAudit } from '@/lib/audit';
 import { defineAction, actionError } from '@/lib/action';
 import { formatUSD } from '@/lib/money';
 import { memberFormSchema, postTransactionSchema } from '@/lib/validations';
+import {
+  findDuplicateCandidates,
+  memberDataFromApplication,
+  type DuplicateCandidate,
+} from '@/features/forms/promote';
 
 // Middleware check for admin authentication
 async function verifyAdmin() {
@@ -229,88 +234,173 @@ export async function restoreMember(memberId: string) {
 }
 
 // Approve a form submission
-export async function approveSubmission(submissionId: string) {
-  try {
-    await verifyAdmin();
-
+/** Members this application might already be, for the reviewer to judge. */
+export const getSubmissionDuplicates = defineAction({
+  name: 'getSubmissionDuplicates',
+  guard: 'admin',
+  schema: z.object({ submissionId: z.string().uuid() }).strict(),
+  async handler(input): Promise<{ candidates: DuplicateCandidate[] }> {
     const submission = await db.formSubmission.findUnique({
-      where: { id: submissionId },
+      where: { id: input.submissionId },
+      select: { submitterName: true, submitterPhone: true, data: true },
     });
+    if (!submission) actionError('Submission not found.');
 
-    if (!submission) throw new Error('Submission not found.');
+    const payload = (submission.data ?? {}) as Record<string, unknown>;
+    const name =
+      submission.submitterName ??
+      `${payload.firstName ?? ''} ${payload.lastName ?? ''}`.trim();
 
-    // If onboarding application, automatically spawn a new Member profile!
-    if (submission.formType === 'MEMBERSHIP') {
-      const payload = submission.data as any;
-      const names = `${payload.firstName} ${payload.lastName}`;
+    return { candidates: await findDuplicateCandidates(name, submission.submitterPhone) };
+  },
+});
 
-      // Aggregate parents/relations
-      const parents: string[] = [];
-      if (payload.fatherName) parents.push(payload.fatherName);
-      if (payload.motherName) parents.push(payload.motherName);
+/**
+ * Approve a submission.
+ *
+ * A membership application must say explicitly what to do — link it to an
+ * existing member, or create a new one. There is no implicit create, because
+ * that is how duplicate profiles get made against a roster that already
+ * contains near-duplicates from the original import.
+ */
+export const approveSubmission = defineAction({
+  name: 'approveSubmission',
+  guard: 'admin',
+  schema: z
+    .object({
+      submissionId: z.string().uuid(),
+      /** Required for MEMBERSHIP submissions that are not already linked. */
+      resolution: z
+        .discriminatedUnion('action', [
+          z.object({ action: z.literal('createMember') }),
+          z.object({ action: z.literal('linkExisting'), memberId: z.string().uuid() }),
+          z.object({ action: z.literal('acknowledge') }),
+        ])
+        .optional(),
+      note: z.string().trim().max(500).optional(),
+    })
+    .strict(),
+  async handler(input, ctx): Promise<{ memberId: string | null }> {
+    const submission = await db.formSubmission.findUnique({
+      where: { id: input.submissionId },
+    });
+    if (!submission) actionError('Submission not found.');
+    if (submission.status === 'APPROVED') actionError('This submission is already approved.');
 
-      const children = (payload.children || []).map((c: any) => c.name);
-      const siblings = (payload.siblings || []).map((s: any) => s.name);
-      const witnesses = (payload.witnesses || []).map((w: any) => ({ name: w.name, phone: w.phone }));
-      const nextOfKin = (payload.funeralSupervisors || []).map((fs: any) => ({ name: fs.name, phone: fs.phone }));
+    const isApplication = submission.formType === 'MEMBERSHIP';
+    const resolution = input.resolution ?? { action: 'acknowledge' as const };
 
-      await db.$transaction(async (tx) => {
-        const newMember = await tx.member.create({
-          data: {
-            names,
-            phone: payload.phone,
-            address: `${payload.streetAddress}, ${payload.city}, ${payload.state} ${payload.zipCode}`,
-            husbandWife: payload.spouseName || null,
-            spousePhone: payload.spousePhone || null,
-            parents,
-            children,
-            siblings,
-            witnesses,
-            nextOfKin,
-          },
-        });
-
-        // Update submission with the spawned memberId
-        await tx.formSubmission.update({
-          where: { id: submissionId },
-          data: {
-            status: 'APPROVED',
-            memberId: newMember.id,
-          },
-        });
-      });
-    } else {
-      await db.formSubmission.update({
-        where: { id: submissionId },
-        data: { status: 'APPROVED' },
-      });
+    if (isApplication && !submission.memberId && resolution.action === 'acknowledge') {
+      actionError(
+        'Choose whether to link this application to an existing member or create a new one.'
+      );
     }
 
-    revalidatePath('/admin/forms');
-    return { success: true };
-  } catch (err: any) {
-    console.error('Error approving submission:', err);
-    return { success: false, error: err.message || 'Failed to approve submission.' };
-  }
-}
+    const memberId = await db.$transaction(async (tx) => {
+      let linkedMemberId: string | null = submission.memberId;
 
-// Reject a form submission
-export async function rejectSubmission(submissionId: string) {
-  try {
-    await verifyAdmin();
+      if (resolution.action === 'linkExisting') {
+        const existing = await tx.member.findUnique({
+          where: { id: resolution.memberId },
+          select: { id: true, archivedAt: true },
+        });
+        if (!existing || existing.archivedAt) actionError('That member no longer exists.');
+        linkedMemberId = existing.id;
+      }
 
-    await db.formSubmission.update({
-      where: { id: submissionId },
-      data: { status: 'REJECTED' },
+      if (resolution.action === 'createMember') {
+        const data = memberDataFromApplication(
+          (submission.data ?? {}) as Record<string, unknown>
+        );
+        if (!data.names) actionError('This application has no name on it.');
+
+        const created = await tx.member.create({
+          data: { ...data, joinedAt: new Date(), joinedAtEstimated: false, status: 'ACTIVE' },
+          select: { id: true },
+        });
+        linkedMemberId = created.id;
+
+        await writeAudit({
+          tx,
+          action: 'MEMBER_CREATED',
+          entityType: 'Member',
+          entityId: created.id,
+          onBehalfOfMemberId: created.id,
+          summary: `Created ${data.names} from application ${submission.reference}`,
+          metadata: { submissionId: submission.id, reference: submission.reference },
+        });
+      }
+
+      await tx.formSubmission.update({
+        where: { id: submission.id },
+        data: {
+          status: 'APPROVED',
+          memberId: linkedMemberId,
+          reviewedById: ctx.userId,
+          reviewedAt: new Date(),
+          reviewNote: input.note ?? null,
+        },
+      });
+
+      await writeAudit({
+        tx,
+        action: 'SUBMISSION_APPROVED',
+        entityType: 'FormSubmission',
+        entityId: submission.id,
+        onBehalfOfMemberId: linkedMemberId,
+        summary: `Approved ${submission.formType} ${submission.reference} (${resolution.action})`,
+        metadata: { resolution: resolution.action },
+      });
+
+      return linkedMemberId;
     });
 
     revalidatePath('/admin/forms');
-    return { success: true };
-  } catch (err: any) {
-    console.error('Error rejecting submission:', err);
-    return { success: false, error: err.message || 'Failed to reject submission.' };
-  }
-}
+    revalidatePath('/admin/members');
+    return { memberId };
+  },
+});
+
+export const rejectSubmission = defineAction({
+  name: 'rejectSubmission',
+  guard: 'admin',
+  schema: z
+    .object({
+      submissionId: z.string().uuid(),
+      note: z.string().trim().max(500).optional(),
+    })
+    .strict(),
+  async handler(input, ctx): Promise<{ submissionId: string }> {
+    const submission = await db.formSubmission.findUnique({
+      where: { id: input.submissionId },
+      select: { id: true, reference: true, formType: true },
+    });
+    if (!submission) actionError('Submission not found.');
+
+    await db.$transaction(async (tx) => {
+      await tx.formSubmission.update({
+        where: { id: submission.id },
+        data: {
+          status: 'REJECTED',
+          reviewedById: ctx.userId,
+          reviewedAt: new Date(),
+          reviewNote: input.note ?? null,
+        },
+      });
+      await writeAudit({
+        tx,
+        action: 'SUBMISSION_REJECTED',
+        entityType: 'FormSubmission',
+        entityId: submission.id,
+        summary: `Rejected ${submission.formType} ${submission.reference}`,
+        metadata: { note: input.note ?? null },
+      });
+    });
+
+    revalidatePath('/admin/forms');
+    return { submissionId: submission.id };
+  },
+});
 
 /** Create a member profile from scratch. */
 export const createMember = defineAction({

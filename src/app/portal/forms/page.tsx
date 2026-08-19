@@ -50,7 +50,8 @@ export default async function PortalFormsPage() {
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">TSA Digital Forms Directory</h1>
           <p className="text-slate-500 text-sm max-w-xl mx-auto">
-            Select a form below to fill out. The forms will automatically pre-populate your profile information to save you time.
+            Choose a form below. Each one is saved to your TSA record when you submit it,
+            and you will be given a reference number to quote.
           </p>
         </div>
 

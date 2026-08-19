@@ -105,7 +105,7 @@ export default function RenewalPage() {
 
       if (!result.success) throw new Error(result.error);
 
-      toast.success(t.success);
+      toast.success(result.reference ? `${t.success} (Kumbukumbu / Reference: ${result.reference})` : t.success, { duration: 12000 });
       form.reset();
     } catch (error) {
       toast.error(t.error);

@@ -4,9 +4,14 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { approveSubmission, rejectSubmission } from '@/features/membership/admin-actions';
+import {
+  approveSubmission,
+  rejectSubmission,
+  getSubmissionDuplicates,
+} from '@/features/membership/admin-actions';
+import type { DuplicateCandidate } from '@/features/forms/promote';
 import { toast } from 'sonner';
-import { Check, X, FileText, Calendar, User, UserPlus } from 'lucide-react';
+import { Check, X, FileText, Calendar, User, UserPlus, AlertTriangle } from 'lucide-react';
 
 interface Submission {
   id: string;
@@ -22,17 +27,83 @@ export function AdminSubmissionsList({ initialSubmissions }: { initialSubmission
   const [submissions, setSubmissions] = useState<Submission[]>(initialSubmissions);
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
-  const handleApprove = async (id: string) => {
+  const [duplicates, setDuplicates] = useState<Record<string, DuplicateCandidate[]>>({});
+
+  const settle = (id: string, status: Submission['status']) =>
+    setSubmissions((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)));
+
+  /**
+   * Membership applications are checked for an existing member first. Approving
+   * without that check is how a second profile gets created for someone already
+   * on the roster.
+   */
+  const handleApprove = async (submission: Submission) => {
+    const { id, formType, memberId } = submission;
     setLoadingId(id);
     try {
-      const res = await approveSubmission(id);
-      if (res.success) {
-        toast.success('Submission approved successfully!');
-        setSubmissions(prev => prev.map(s => s.id === id ? { ...s, status: 'APPROVED' } : s));
-      } else {
-        toast.error(res.error || 'Failed to approve.');
+      if (formType === 'MEMBERSHIP' && !memberId && duplicates[id] === undefined) {
+        const found = await getSubmissionDuplicates({ submissionId: id });
+        if (found.success && found.data.candidates.length > 0) {
+          setDuplicates((prev) => ({ ...prev, [id]: found.data.candidates }));
+          toast.warning('This may already be an existing member — choose below.');
+          return;
+        }
+        setDuplicates((prev) => ({ ...prev, [id]: [] }));
       }
-    } catch (err) {
+
+      const resolution =
+        formType === 'MEMBERSHIP' && !memberId
+          ? ({ action: 'createMember' } as const)
+          : ({ action: 'acknowledge' } as const);
+
+      const res = await approveSubmission({ submissionId: id, resolution });
+      if (res.success) {
+        toast.success('Submission approved.');
+        settle(id, 'APPROVED');
+      } else {
+        toast.error(res.error);
+      }
+    } catch {
+      toast.error('An error occurred.');
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
+  const handleLinkExisting = async (id: string, memberId: string, name: string) => {
+    setLoadingId(id);
+    try {
+      const res = await approveSubmission({
+        submissionId: id,
+        resolution: { action: 'linkExisting', memberId },
+      });
+      if (res.success) {
+        toast.success(`Linked to ${name}.`);
+        settle(id, 'APPROVED');
+      } else {
+        toast.error(res.error);
+      }
+    } catch {
+      toast.error('An error occurred.');
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
+  const handleCreateAnyway = async (id: string) => {
+    setLoadingId(id);
+    try {
+      const res = await approveSubmission({
+        submissionId: id,
+        resolution: { action: 'createMember' },
+      });
+      if (res.success) {
+        toast.success('New member created.');
+        settle(id, 'APPROVED');
+      } else {
+        toast.error(res.error);
+      }
+    } catch {
       toast.error('An error occurred.');
     } finally {
       setLoadingId(null);
@@ -42,14 +113,14 @@ export function AdminSubmissionsList({ initialSubmissions }: { initialSubmission
   const handleReject = async (id: string) => {
     setLoadingId(id);
     try {
-      const res = await rejectSubmission(id);
+      const res = await rejectSubmission({ submissionId: id });
       if (res.success) {
         toast.success('Submission rejected.');
-        setSubmissions(prev => prev.map(s => s.id === id ? { ...s, status: 'REJECTED' } : s));
+        settle(id, 'REJECTED');
       } else {
-        toast.error(res.error || 'Failed to reject.');
+        toast.error(res.error);
       }
-    } catch (err) {
+    } catch {
       toast.error('An error occurred.');
     } finally {
       setLoadingId(null);
@@ -108,18 +179,62 @@ export function AdminSubmissionsList({ initialSubmissions }: { initialSubmission
                   </div>
                 </CardContent>
 
+                {duplicates[sub.id]?.length ? (
+                  <div className="mx-6 mb-4 rounded-lg border-2 border-amber-300 bg-amber-50 p-4">
+                    <p className="flex items-center gap-2 text-sm font-bold text-amber-900">
+                      <AlertTriangle className="h-4 w-4" aria-hidden />
+                      This may already be a member
+                    </p>
+                    <p className="mt-1 text-sm text-amber-800">
+                      Link the application to the right person, or create a new member if none
+                      of these is them.
+                    </p>
+                    <div className="mt-3 grid gap-2">
+                      {duplicates[sub.id].map((candidate) => (
+                        <Button
+                          key={candidate.id}
+                          variant="outline"
+                          disabled={loadingId !== null}
+                          onClick={() =>
+                            handleLinkExisting(sub.id, candidate.id, candidate.names)
+                          }
+                          className="h-auto w-full justify-start bg-white px-3 py-2 text-left"
+                        >
+                          <span className="flex flex-col gap-0.5">
+                            <span className="text-sm font-semibold text-slate-900">
+                              {candidate.names}
+                            </span>
+                            <span className="text-xs font-normal text-slate-600">
+                              {candidate.phone ?? 'no phone on file'} &middot; matched on{' '}
+                              {candidate.reason}
+                            </span>
+                          </span>
+                        </Button>
+                      ))}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      disabled={loadingId !== null}
+                      onClick={() => handleCreateAnyway(sub.id)}
+                      className="mt-2 h-9 w-full text-sm font-semibold text-amber-900 hover:bg-amber-100"
+                    >
+                      None of these — create a new member
+                    </Button>
+                  </div>
+                ) : null}
+
                 <div className="px-6 pb-6 pt-2 border-t border-slate-100 flex gap-2">
-                  <Button 
-                    onClick={() => handleApprove(sub.id)} 
+                  <Button
+                    onClick={() => handleApprove(sub)}
                     disabled={loadingId !== null}
                     className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold h-9"
                   >
                     <Check className="mr-1 h-4 w-4" /> Approve
                   </Button>
-                  <Button 
-                    onClick={() => handleReject(sub.id)} 
+                  <Button
+                    onClick={() => handleReject(sub.id)}
                     disabled={loadingId !== null}
-                    variant="outline" 
+                    variant="outline"
                     className="flex-1 border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 text-xs font-semibold h-9"
                   >
                     <X className="mr-1 h-4 w-4" /> Reject

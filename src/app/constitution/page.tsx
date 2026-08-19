@@ -120,7 +120,7 @@ export default function ConstitutionPage() {
 
       if (!result.success) throw new Error(result.error);
 
-      toast.success(lang === 'en' ? "Agreement signed successfully!" : "Makubaliano yamesainiwa kwa mafanikio!");
+      toast.success((lang === 'en' ? "Agreement signed successfully!" : "Makubaliano yamesainiwa kwa mafanikio!") + (result.reference ? ` Reference: ${result.reference}` : ''), { duration: 12000 });
       form.reset();
     } catch (error) {
       toast.error(lang === 'en' ? "Failed to submit." : "Imeshindikana kutuma.");

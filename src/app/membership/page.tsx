@@ -265,7 +265,7 @@ export default function MembershipPage() {
 
       if (!result.success) throw new Error(result.error);
 
-      toast.success(lang === 'en' ? "Application submitted successfully!" : "Maombi yametumwa kwa mafanikio!");
+      toast.success((lang === 'en' ? "Application submitted successfully!" : "Maombi yametumwa kwa mafanikio!") + (result.reference ? ` Reference: ${result.reference}` : ''), { duration: 12000 });
       form.reset();
     } catch (error) {
       toast.error(lang === 'en' ? "Submission failed. Please check your connection." : "Imeshindikana kutuma. Tafadhali jaribu tena.");
