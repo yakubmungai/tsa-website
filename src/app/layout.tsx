@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 import { AuthProvider } from "@/components/auth-provider"
 import { getLocale } from "@/lib/i18n"
+import { DemoBannerGate } from "@/components/demo-banner-gate"
 
 const publicSans = Public_Sans({ subsets: ['latin'], variable: '--font-public-sans' })
 const merriweather = Merriweather({
@@ -123,6 +124,7 @@ export default async function RootLayout({
         <AuthProvider>
           <LanguageProvider initialLanguage={locale}>{children}</LanguageProvider>
         </AuthProvider>
+        <DemoBannerGate />
         <Toaster />
         <SonnerToaster />
       </body>
