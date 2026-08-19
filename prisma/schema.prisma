@@ -95,6 +95,8 @@ model Member {
   transactions    Transaction[]
   submissions     FormSubmission[]
   delegationsGranted Delegation[] @relation("DelegationOwner")
+  ledgerEntries      LedgerEntry[]
+  balance            MemberBalance?
 
   @@index([archivedAt])
   @@index([phoneE164])
@@ -174,6 +176,141 @@ model Transaction {
   type        String   // "ADVANCE", "REGISTRATION", "MEMBERSHIP", "OTHER"
   description String?
   date        DateTime @default(now())
+}
+
+/// NOTE: Transaction is retained read-only as the migration reference. All new
+/// financial code writes LedgerEntry instead. It is dropped once the ledger has
+/// been reconciled against it in production.
+
+/// What a ledger entry is for.
+///
+/// This enum is the classification surface for the association's own reporting
+/// and for IRS Form 990, so values are added rather than renamed.
+enum LedgerAccount {
+  /// Balances carried over from the treasurer's spreadsheet at migration.
+  OPENING_BALANCE
+  /// Art 5.3 — kiingilio, $100, non-refundable.
+  ENTRY_FEE
+  /// Art 5.3 / 17.1 — ada, $25, every April, non-refundable.
+  ANNUAL_DUES
+  /// Art 5.3 — akiba tangulizi, $100, refundable. The float levies draw from.
+  ADVANCE_DEPOSIT
+  /// Art 17.2 — shida/msiba, $3,000 divided among active members.
+  HARDSHIP_LEVY
+  /// Art 17.3 — death of a member or their child under 21, $10,000 divided.
+  DEATH_LEVY
+  /// Art 6.2 — 10% of what TSA had to borrow because an advance was short.
+  BORROW_PENALTY
+  /// Art 5.4 — money received minus money contributed, repaid on exit.
+  EXIT_REPAYMENT
+  /// Art 18.1 / 18.2 — mafao paid to a member.
+  BENEFIT_PAYOUT
+  /// Art 4.3 — $300 toward a memorial, managed by a leader.
+  MEMORIAL_GRANT
+  /// Art 18.6 / 18.7 / 18.8 — birthdays, weddings, graduations.
+  MILESTONE_GRANT
+  DONATION
+  /// Art 18.3 — 10% to whoever brought in an outside donation.
+  FINDER_INCENTIVE
+  /// Art 18.4 — $200 per event paid out, leadership motisha.
+  LEADERSHIP_MOTISHA
+  /// Art 18.5 — mileage, food, lodging for leaders on association business.
+  REIMBURSEMENT
+  /// Payment processing costs. Kept separate, never netted off an amount.
+  PROCESSING_FEE
+  ADJUSTMENT
+}
+
+enum LedgerEntryKind {
+  OPENING
+  /// An obligation placed on a member.
+  CHARGE
+  /// Money in.
+  PAYMENT
+  /// Money out.
+  PAYOUT
+  /// Undoes an earlier entry. Corrections are never edits.
+  REVERSAL
+  ADJUSTMENT
+}
+
+/// The association's books.
+///
+/// Append-only. Entries are never updated or deleted — a mistake is corrected
+/// by posting a REVERSAL that points at the original. KATIBA Art 6.1 gives
+/// every member the right to inspect these records, which is only meaningful if
+/// they cannot be quietly rewritten.
+///
+/// Amounts are **signed integer cents**. Positive increases what the member
+/// holds; negative is a charge or a payout. Never a float, and never Decimal:
+/// Art 17.2 divides $3,000 among 154 members, which needs exact remainder
+/// handling that only integers give.
+model LedgerEntry {
+  id          String          @id @default(uuid())
+
+  /// Null for association-side entries that belong to no member — the Art 18.4
+  /// leadership motisha, or borrowing from the Investment Club.
+  memberId    String?
+  member      Member?         @relation(fields: [memberId], references: [id], onDelete: Restrict)
+
+  account     LedgerAccount
+  entryKind   LedgerEntryKind
+  amountCents Int
+  currency    String          @default("USD")
+
+  description   String
+  descriptionSw String?
+
+  /// When it happened in the association's affairs — an April dues run, the
+  /// date a case was announced. Distinct from when the row was written.
+  occurredAt DateTime
+  postedAt   DateTime @default(now())
+
+  /// Links out to whatever caused this entry. Nullable now; used from Stage 2.
+  caseEventId  String?
+  assessmentId String?
+  paymentId    String?
+
+  /// The entry this reverses, if any.
+  reversesId String?      @unique
+  reverses   LedgerEntry? @relation("Reversal", fields: [reversesId], references: [id])
+  reversedBy LedgerEntry? @relation("Reversal")
+  /// Set only once a reversal exists, so voided entries drop out of balances.
+  voidedAt   DateTime?
+
+  createdByUserId String?
+
+  /// Makes double-posting impossible even across separate code paths, e.g.
+  /// "stripe:pi_123:ADVANCE_DEPOSIT" or "legacy:<transaction id>".
+  idempotencyKey String? @unique
+
+  @@index([memberId, occurredAt])
+  @@index([account, occurredAt])
+  @@index([caseEventId])
+  @@index([assessmentId])
+}
+
+/// A cached view of each member's position.
+///
+/// Derived, never authoritative: it is recomputed inside the same transaction
+/// as every ledger write, and a nightly job rebuilds it from raw entries and
+/// alerts on drift. It exists because the admin directory otherwise loads every
+/// transaction for all 154 members on each page view — which is fine at 300
+/// rows and not at the thousands a year the levies will produce.
+model MemberBalance {
+  memberId            String   @id
+  member              Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  netCents            Int      @default(0)
+  advanceCents        Int      @default(0)
+  entryFeeCents       Int      @default(0)
+  duesCents           Int      @default(0)
+  /// Which April cycle duesCents refers to.
+  duesYear            Int
+  /// Levies charged but not yet covered.
+  outstandingCents    Int      @default(0)
+
+  recomputedAt DateTime @default(now())
 }
 
 /// A form submitted from the public site or the portal.
