@@ -7,7 +7,6 @@ import { LanguageProvider } from "@/components/language-context"
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 import { AuthProvider } from "@/components/auth-provider"
-import { DemoBanner } from "@/components/demo-banner"
 import { getLocale } from "@/lib/i18n"
 
 const publicSans = Public_Sans({ subsets: ['latin'], variable: '--font-public-sans' })
@@ -121,7 +120,6 @@ export default async function RootLayout({
             })
           }}
         />
-        <DemoBanner />
         <AuthProvider>
           <LanguageProvider initialLanguage={locale}>{children}</LanguageProvider>
         </AuthProvider>
