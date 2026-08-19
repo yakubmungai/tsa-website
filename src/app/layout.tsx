@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 import { AuthProvider } from "@/components/auth-provider"
 import { DemoBanner } from "@/components/demo-banner"
+import { getLocale } from "@/lib/i18n"
 
 const publicSans = Public_Sans({ subsets: ['latin'], variable: '--font-public-sans' })
 const merriweather = Merriweather({
@@ -84,13 +85,17 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  // Resolved on the server so the first paint is already in the right
+  // language, and <html lang> is correct for screen readers.
+  const locale = await getLocale()
+
   return (
-    <html lang="en">
+    <html lang={locale}>
       <body className={`${publicSans.variable} ${merriweather.variable} font-sans antialiased`}>
         <script
           type="application/ld+json"
@@ -118,7 +123,7 @@ export default function RootLayout({
         />
         <DemoBanner />
         <AuthProvider>
-          <LanguageProvider>{children}</LanguageProvider>
+          <LanguageProvider initialLanguage={locale}>{children}</LanguageProvider>
         </AuthProvider>
         <Toaster />
         <SonnerToaster />
