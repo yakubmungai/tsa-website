@@ -5,7 +5,9 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: '/api/',
+      // The portal and admin sit behind auth, but they should not be crawled
+      // or appear in search results either.
+      disallow: ['/api/', '/portal/', '/admin/', '/login', '/signup'],
     },
     sitemap: 'https://tansha.org/sitemap.xml',
   }
