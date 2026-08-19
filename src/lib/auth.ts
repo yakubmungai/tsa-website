@@ -41,22 +41,69 @@ const providers: any[] = [
 
       // Always run a verification, even when there is no user, so response
       // timing does not reveal whether the address is registered.
-      const isPasswordValid = verifyPassword(
+      const { valid, needsRehash } = await verifyPassword(
         credentials.password,
         user?.passwordHash ?? DUMMY_PASSWORD_HASH
       );
 
-      if (!user || !user.passwordHash || !isPasswordValid) {
+      if (!user || !user.passwordHash || !valid) {
         throw new Error(INVALID_CREDENTIALS);
       }
+
+      // Silently upgrade hashes still using the old weak parameters.
+      if (needsRehash) {
+        const { hashPassword } = await import('./crypto');
+        await db.user.update({
+          where: { id: user.id },
+          data: { passwordHash: await hashPassword(credentials.password) },
+        });
+      }
+
+      await db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
 
       return {
         id: user.id,
         email: user.email,
         role: user.role,
         memberId: user.memberId || null,
-        name: user.member?.names || user.email.split('@')[0],
+        name: user.member?.names || user.email?.split('@')[0] || 'TSA member',
+        sessionVersion: user.sessionVersion,
       };
+    },
+  }),
+
+  /**
+   * Phone sign-in.
+   *
+   * Takes a ticket the server minted after checking a code, plus which of the
+   * accounts that ticket permits. It never sees the code: by the time this
+   * runs, possession of the number is already proved.
+   */
+  CredentialsProvider({
+    id: 'phone-otp',
+    name: 'Phone code',
+    credentials: {
+      ticket: { label: 'Ticket', type: 'text' },
+      selectionId: { label: 'Account', type: 'text' },
+      selectionKind: { label: 'Kind', type: 'text' },
+    },
+    async authorize(credentials) {
+      const ticket = credentials?.ticket;
+      const selectionId = credentials?.selectionId;
+      const selectionKind = credentials?.selectionKind;
+
+      if (!ticket || !selectionId || (selectionKind !== 'user' && selectionKind !== 'claim')) {
+        throw new Error('Your sign-in request has expired. Please start again.');
+      }
+
+      const { completePhoneLogin, PhoneLoginError } = await import('./phone-login');
+      try {
+        return await completePhoneLogin(ticket, selectionId, selectionKind);
+      } catch (err) {
+        if (err instanceof PhoneLoginError) throw new Error(err.message);
+        console.error('[auth:phone-otp] failed', err);
+        throw new Error('Sign-in failed. Please try again.');
+      }
     },
   }),
 ];
@@ -111,15 +158,39 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = (user as any).role;
         token.memberId = (user as any).memberId;
+        token.ver = (user as any).sessionVersion ?? 0;
       }
       return token;
     },
     async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as string;
-        session.user.memberId = token.memberId as string | null;
+      if (!token?.id) return session;
+
+      // Read role, member link and session version from the database rather
+      // than trusting a token that may be up to 30 days old. Without this, a
+      // role change or a revoked account stays live until the token expires.
+      const user = await db.user.findUnique({
+        where: { id: token.id as string },
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          memberId: true,
+          sessionVersion: true,
+          member: { select: { names: true, archivedAt: true } },
+        },
+      });
+
+      // A deleted account, an archived member, or a bumped session version all
+      // invalidate the session immediately.
+      if (!user || user.member?.archivedAt || user.sessionVersion !== (token.ver ?? 0)) {
+        return { ...session, user: undefined } as unknown as typeof session;
       }
+
+      session.user.id = user.id;
+      session.user.email = user.email;
+      session.user.role = user.role;
+      session.user.memberId = user.memberId;
+      session.user.name = user.member?.names ?? user.email ?? null;
       return session;
     },
   },
@@ -136,7 +207,8 @@ declare module 'next-auth' {
   interface Session {
     user: {
       id: string;
-      email: string;
+      // Nullable: members who sign in by phone may never supply an email.
+      email: string | null;
       role: string;
       memberId: string | null;
       name?: string | null;

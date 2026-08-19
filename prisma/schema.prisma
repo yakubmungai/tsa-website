@@ -9,15 +9,33 @@ generator client {
 
 model User {
   id           String    @id @default(uuid())
-  email        String    @unique
-  passwordHash String?   // Nullable for users who only use Google login
+  // Nullable: the member roster has no email column at all, so members who sign
+  // in by phone may never supply one.
+  email        String?   @unique
+  passwordHash String?   // Null for accounts that sign in by phone code only
   role         Role      @default(MEMBER) // MEMBER, ADMIN
+
+  // NOT unique. Spouses share a handset — six pairs do in the real roster — so a
+  // phone number identifies a set of candidate accounts, not one identity.
+  // The uniqueness that matters is already on memberId.
+  phoneE164       String?
+  phoneVerifiedAt DateTime?
+
+  /// Bumped to invalidate every existing session for this user: password
+  /// change, phone change, role change, admin force-logout. Compared against
+  /// the value carried in the JWT on each request.
+  sessionVersion Int      @default(0)
+  claimedAt      DateTime?  // when the account was first activated
+  lastLoginAt    DateTime?
+
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
-  
+
   // Link to the member profile details
   memberId     String?   @unique
   member       Member?   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([phoneE164])
 }
 
 enum Role {
@@ -40,7 +58,10 @@ model VerificationToken {
 model Member {
   id              String             @id @default(uuid())
   names           String             // Full name
-  phone           String?            // Primary phone
+  phone           String?            // As recorded by the treasurer, preserved verbatim
+  /// Normalised to E.164, and the identity members sign in with.
+  /// NOT unique: spouses share a handset. See User.phoneE164.
+  phoneE164       String?
   archivedAt      DateTime?          // Soft delete. Financial history must survive.
   address         String?            // Full address
   husbandWife     String?            // Spouse name
@@ -59,6 +80,69 @@ model Member {
   submissions     FormSubmission[]
 
   @@index([archivedAt])
+  @@index([phoneE164])
+}
+
+/// A single-use ticket minted after a phone code has been verified.
+///
+/// This is what closes the account-takeover hole. The old flow let the client
+/// name the member at the final step, so anyone who knew a member's phone could
+/// send a code to their own email and claim that member's ledger.
+///
+/// Now the server resolves which accounts a *verified* phone number may unlock
+/// and records them in `candidates`. The client can only choose from that list,
+/// which matters because a handset shared by spouses legitimately maps to two
+/// accounts.
+///
+/// The ticket also exists because Twilio Verify consumes a verification on the
+/// first successful check — so the account chooser cannot re-verify, and must
+/// rely on something the server already vouched for.
+model AuthTicket {
+  id         String   @id @default(uuid())
+  /// SHA-256 of the value handed to the client. The raw ticket is never stored.
+  tokenHash  String   @unique
+  purpose    String   // "PHONE_LOGIN"
+  phoneE164  String
+  /// [{ kind: "user" | "claim", id, displayName }]
+  candidates Json
+  ipHash     String?
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+/// One row per code we were asked to send. Feeds abuse investigation and gives
+/// the delivery channel an audit trail; the code itself is never stored here.
+model OtpRequest {
+  id        String   @id @default(uuid())
+  phoneE164 String
+  channel   String   // "sms" | "whatsapp" | "call" | "demo"
+  purpose   String   // "LOGIN"
+  outcome   String   // SENT | RATE_LIMITED | NO_ACCOUNT | TRANSPORT_ERROR
+  providerRef String?
+  ipHash    String?
+  createdAt DateTime @default(now())
+
+  @@index([phoneE164, createdAt])
+  @@index([createdAt])
+}
+
+/// Fixed-window rate limit counters.
+///
+/// Kept in Postgres rather than in memory: on serverless every invocation has
+/// its own memory, so an in-process counter limits nothing.
+model RateLimitBucket {
+  id          String   @id @default(uuid())
+  scope       String   // "otp:send:phone", "otp:check:phone", "otp:send:ip", ...
+  key         String
+  windowStart DateTime
+  count       Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  @@unique([scope, key, windowStart])
+  @@index([windowStart])
 }
 
 // Transaction history for auditing balances

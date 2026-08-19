@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { LogIn, Mail, Lock } from 'lucide-react';
+import { PhoneLoginForm } from '@/components/phone-login-form';
 
 function EmailPasswordForm() {
   const router = useRouter();
@@ -96,25 +97,57 @@ function EmailPasswordForm() {
   );
 }
 
+function Divider({ label }: { label: string }) {
+  return (
+    <div className="relative text-center text-xs uppercase tracking-wide text-slate-400">
+      <span className="relative z-10 bg-white px-2">{label}</span>
+      <div className="absolute top-1/2 left-0 right-0 -z-0 border-b border-slate-200" />
+    </div>
+  );
+}
+
 /**
- * `children` carries the demo sign-in block, which the server renders only when
- * demo mode is active — so nothing about it exists in the bundle otherwise.
+ * Phone is the primary way in.
+ *
+ * The member roster has a phone number for everyone and no email column at all,
+ * so a code to their phone is the only route that works for the whole
+ * membership — and for older members it means nothing to remember.
+ *
+ * Email and password stay available, collapsed, for accounts that have one.
+ * `children` carries the demo sign-in block, rendered by the server only when
+ * demo mode is on.
  */
 export function LoginForm({ children }: { children?: React.ReactNode }) {
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
     <CardContent className="space-y-5">
       <Suspense
-        fallback={<div className="p-6 text-center text-sm text-slate-400">Loading form...</div>}
+        fallback={<div className="p-6 text-center text-sm text-slate-400">Loading...</div>}
       >
-        <EmailPasswordForm />
+        <PhoneLoginForm />
       </Suspense>
+
+      <Divider label="Au / Or" />
+
+      {showPassword ? (
+        <Suspense fallback={null}>
+          <EmailPasswordForm />
+        </Suspense>
+      ) : (
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => setShowPassword(true)}
+          className="h-11 w-full text-base font-medium text-slate-600 hover:text-slate-900"
+        >
+          Ingia kwa barua pepe / Sign in with email
+        </Button>
+      )}
 
       {children ? (
         <>
-          <div className="relative text-center text-xs uppercase tracking-wide text-slate-400">
-            <span className="relative z-10 bg-white px-2">Au / Or</span>
-            <div className="absolute top-1/2 left-0 right-0 -z-0 border-b border-slate-200" />
-          </div>
+          <Divider label="Majaribio / Testing" />
           {children}
         </>
       ) : null}

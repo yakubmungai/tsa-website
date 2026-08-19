@@ -41,50 +41,50 @@ export interface DemoMemberSpec {
 export const DEMO_MEMBERS: DemoMemberSpec[] = [
   {
     names: 'Amina Hassan Mrisho',
-    phone: '+15550100001',
+    phone: '+17135550101',
     address: '1420 Beechnut St, Houston, TX 77072',
     husbandWife: 'Rashid Mrisho',
-    spousePhone: '+15550100002',
+    spousePhone: '+17135550102',
     parents: ['Hassan Mrisho', 'Zainabu Hassan'],
     children: ['Yusuf Mrisho', 'Layla Mrisho'],
     siblings: ['Salma Mrisho'],
-    witnesses: [{ name: 'Baraka Mwakalinga', phone: '+15550100003' }],
-    nextOfKin: [{ name: 'Rashid Mrisho', phone: '+15550100002' }],
+    witnesses: [{ name: 'Baraka Mwakalinga', phone: '+17135550103' }],
+    nextOfKin: [{ name: 'Rashid Mrisho', phone: '+17135550102' }],
     ledger: { advance: 100, registration: 100, membership: 25 },
     note: 'FULL tier — holds the $125 minimum. Entitled to $10,000 / $3,000.',
   },
   {
     names: 'Baraka Mwakalinga',
-    phone: '+15550100003',
+    phone: '+17135550103',
     address: '88 Wilcrest Dr, Houston, TX 77042',
     parents: ['Elias Mwakalinga', 'Tatu Elias'],
     children: ['Neema Mwakalinga'],
-    nextOfKin: [{ name: 'Neema Mwakalinga', phone: '+15550100004' }],
+    nextOfKin: [{ name: 'Neema Mwakalinga', phone: '+17135550104' }],
     ledger: { advance: 150, registration: 100, membership: 25 },
     note: 'FULL tier, with surplus advance.',
   },
   {
     names: 'Zawadi Massawe',
-    phone: '+15550100005',
+    phone: '+17135550105',
     address: '317 Dairy Ashford Rd, Houston, TX 77079',
     parents: ['Method Massawe', 'Anna Method'],
     children: ['Upendo Massawe', 'Frank Massawe'],
-    nextOfKin: [{ name: 'Upendo Massawe', phone: '+15550100006' }],
+    nextOfKin: [{ name: 'Upendo Massawe', phone: '+17135550106' }],
     ledger: { advance: 100, registration: 100, membership: 25 },
     note: 'FULL tier. Elderly member whose daughter helps her — delegation case.',
   },
   {
     names: 'Upendo Massawe',
-    phone: '+15550100006',
+    phone: '+17135550106',
     address: '317 Dairy Ashford Rd, Houston, TX 77079',
     parents: ['Zawadi Massawe'],
-    nextOfKin: [{ name: 'Zawadi Massawe', phone: '+15550100005' }],
+    nextOfKin: [{ name: 'Zawadi Massawe', phone: '+17135550105' }],
     ledger: { advance: 100, registration: 100, membership: 25 },
     note: "FULL tier. Zawadi's daughter — the helper persona.",
   },
   {
     names: 'Neema Kimaro',
-    phone: '+15550100007',
+    phone: '+17135550107',
     address: '2100 Eldridge Pkwy, Houston, TX 77077',
     husbandWife: 'Joseph Kimaro',
     children: ['Gloria Kimaro'],
@@ -93,7 +93,7 @@ export const DEMO_MEMBERS: DemoMemberSpec[] = [
   },
   {
     names: 'Joseph Mchome',
-    phone: '+15550100008',
+    phone: '+17135550108',
     address: '5401 Chimney Rock Rd, Houston, TX 77081',
     parents: ['Wilfred Mchome'],
     ledger: { advance: 35, registration: 0, membership: 25 },
@@ -101,7 +101,7 @@ export const DEMO_MEMBERS: DemoMemberSpec[] = [
   },
   {
     names: 'Grace Ndosi',
-    phone: '+15550100009',
+    phone: '+17135550109',
     address: '910 Gessner Rd, Houston, TX 77024',
     children: ['Peter Ndosi'],
     ledger: { advance: 0, registration: 0, membership: 25 },
@@ -109,21 +109,21 @@ export const DEMO_MEMBERS: DemoMemberSpec[] = [
   },
   {
     names: 'Emmanuel Shirima',
-    phone: '+15550100010',
+    phone: '+17135550110',
     address: '44 Westheimer Rd, Houston, TX 77056',
     ledger: { advance: 0, registration: 0, membership: 25 },
     note: 'MINIMAL tier.',
   },
   {
     names: 'Fatuma Juma',
-    phone: '+15550100011',
+    phone: '+17135550111',
     address: '77 Bissonnet St, Houston, TX 77074',
     ledger: { advance: 0, registration: 0, membership: 0 },
     note: 'VOLUNTARY tier — nothing on account. Support is kihiari only.',
   },
   {
     names: 'Daniel Kileo',
-    phone: '+15550100012',
+    phone: '+17135550112',
     address: '1201 Fondren Rd, Houston, TX 77096',
     children: ['Esther Kileo'],
     ledger: { advance: -45, registration: 0, membership: 25 },
@@ -131,20 +131,20 @@ export const DEMO_MEMBERS: DemoMemberSpec[] = [
   },
   {
     names: 'Salma Mrisho',
-    phone: '+15550100013',
+    phone: '+17135550113',
     address: '620 Sugar Creek Blvd, Sugar Land, TX 77478',
     husbandWife: 'Hamisi Mrisho',
-    spousePhone: '+15550100013',
+    spousePhone: '+17135550113',
     siblings: ['Amina Hassan Mrisho'],
     ledger: { advance: 100, registration: 100, membership: 25 },
     note: 'Shares a handset with Hamisi — exercises the account chooser.',
   },
   {
     names: 'Hamisi Mrisho',
-    phone: '+15550100013',
+    phone: '+17135550113',
     address: '620 Sugar Creek Blvd, Sugar Land, TX 77478',
     husbandWife: 'Salma Mrisho',
-    spousePhone: '+15550100013',
+    spousePhone: '+17135550113',
     ledger: { advance: 80, registration: 100, membership: 25 },
     note: 'Shares a handset with Salma, and is on a different tier to her.',
   },
@@ -210,12 +210,15 @@ export async function seedDemoData(
   log: (line: string) => void = () => {}
 ): Promise<SeedResult> {
   const byName = new Map<string, string>();
+  const phoneByName = new Map<string, string>();
 
   for (const m of DEMO_MEMBERS) {
     const created = await client.member.create({
       data: {
         names: m.names,
         phone: m.phone,
+        // Already E.164 in the demo set, so sign-in works without a backfill.
+        phoneE164: m.phone,
         address: m.address,
         husbandWife: m.husbandWife ?? null,
         spousePhone: m.spousePhone ?? null,
@@ -229,6 +232,7 @@ export async function seedDemoData(
       select: { id: true },
     });
     byName.set(m.names, created.id);
+    phoneByName.set(m.names, m.phone);
     log(`  ${m.names.padEnd(24)} ${m.note}`);
   }
 
@@ -242,6 +246,9 @@ export async function seedDemoData(
         passwordHash: null,
         role: account.role,
         memberId: account.linkTo ? (byName.get(account.linkTo) ?? null) : null,
+        // Mirror the member's number so phone sign-in resolves this account.
+        phoneE164: account.linkTo ? (phoneByName.get(account.linkTo) ?? null) : null,
+        phoneVerifiedAt: account.linkTo ? new Date() : null,
       },
     });
     log(`  ${account.email.padEnd(24)} ${account.role}${account.linkTo ? ` -> ${account.linkTo}` : ''}`);

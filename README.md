@@ -63,6 +63,38 @@ members ($3,000 ÷ 154), which needs exact remainder distribution.
 When migrating a legacy `Decimal` column use `centsFromDecimalString(d.toString())`.
 `Number(d) * 100` is wrong: `0.1 * 100 === 10.000000000000002`.
 
+### Phone sign-in
+Members sign in with a code sent to their phone. Three steps, with a
+server-minted ticket in between:
+
+```
+requestPhoneCode(phone)        -> a code is delivered
+verifyPhoneCode(phone, code)   -> ticket + the accounts this number may unlock
+signIn('phone-otp', { ticket, selectionId, selectionKind })
+```
+
+**The ticket is the security boundary.** `verifyPhoneCode` resolves the
+candidate accounts server-side from the number that was just proved, and records
+them on the ticket. `completePhoneLogin` then refuses any selection not on that
+list. The flow this replaced let the client name the member at the final step
+with nothing binding it to the code, so knowing a member's phone number was
+enough to claim their profile and ledger.
+
+The ticket is also a practical necessity: Twilio Verify consumes a verification
+on the first successful check, so the account chooser that shared handsets need
+cannot re-verify and must rely on something the server already vouched for.
+
+`requestPhoneCode` answers identically whether or not the number belongs to a
+member, and pads its response time, so it cannot be used to enumerate members.
+
+**Delivery** is pluggable (`src/lib/verification/`). Twilio Verify when
+configured; otherwise a demo transport that shows the code on screen instead of
+sending it — refused on the production host. That means the flow can be built,
+tested and demonstrated before a Twilio account exists.
+
+Run `npm run verify:phone-login` against the demo database to exercise the
+security properties, including the takeover regression tests.
+
 ### Phone numbers
 Phone is the only identifier the roster holds for **every** member — there is no
 email column at all — so it is the primary login identity. `src/lib/phone.ts`

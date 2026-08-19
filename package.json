@@ -11,7 +11,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
-    "seed:demo": "tsx prisma/seed-demo.ts"
+    "seed:demo": "tsx prisma/seed-demo.ts",
+    "verify:phone-login": "tsx --conditions=react-server scripts/verify-phone-login.ts",
+    "backfill:phones": "tsx scripts/backfill-phone-e164.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
