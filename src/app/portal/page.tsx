@@ -1,6 +1,8 @@
 import { getEffectiveContext } from '@/lib/session';
 import { db } from '@/lib/db';
 import { AccountSwitcher } from '@/components/account-switcher';
+import { getTranslations } from '@/lib/i18n';
+import { showComplianceStatus } from '@/lib/rollout';
 import { redirect } from 'next/navigation';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
@@ -21,6 +23,8 @@ import Link from 'next/link';
 
 export default async function PortalPage() {
   const ctx = await getEffectiveContext();
+  const t = await getTranslations();
+  const showStatus = showComplianceStatus();
 
   if (!ctx) {
     redirect('/login');
@@ -55,14 +59,14 @@ export default async function PortalPage() {
         <main className="flex-grow flex items-center justify-center p-8">
           <Card className="w-full max-w-md border-t-4 border-t-amber-500 bg-white shadow-lg text-center p-6">
             <CardHeader>
-              <CardTitle>Account Link Pending</CardTitle>
+              <CardTitle>{t.portal.accountPending.title}</CardTitle>
               <CardDescription>
-                Your account is registered but not yet linked to a TSA member profile.
+                {t.portal.accountPending.body}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-slate-600 text-sm mb-4">
-                Please contact the TSA administrators to link your profile so you can access your dashboard.
+                {t.portal.accountPending.contact}
               </p>
               <Link href="/" className="text-emerald-600 font-semibold hover:underline">
                 Return to Homepage
@@ -96,11 +100,11 @@ export default async function PortalPage() {
         <main className="flex-grow flex items-center justify-center p-8">
           <Card className="w-full max-w-md border-t-4 border-t-red-500 bg-white shadow-lg text-center p-6">
             <CardHeader>
-              <CardTitle>Profile Not Found</CardTitle>
+              <CardTitle>{t.portal.notFound.title}</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-slate-600 text-sm mb-4">
-                We could not locate your member profile details. Please contact the administrator.
+                {t.portal.notFound.body}
               </p>
             </CardContent>
           </Card>
@@ -133,65 +137,85 @@ export default async function PortalPage() {
       <main className="flex-grow max-w-7xl w-full mx-auto pt-28 pb-10 px-4 sm:px-6 lg:px-8 space-y-8">
         {/* Welcome Banner */}
         <div className="bg-gradient-to-r from-emerald-800 to-emerald-950 text-white rounded-2xl p-6 sm:p-8 shadow-md">
-          <h1 className="text-2xl sm:text-3xl font-bold">Welcome, {member.names}!</h1>
-          <p className="text-emerald-100/90 text-sm mt-1 sm:text-base">
-            Member Portal Dashboard • Secure and Up-to-Date
-          </p>
+          <h1 className="text-2xl sm:text-3xl font-bold">
+            {t.portal.welcome}, {member.names}
+          </h1>
+          <p className="text-emerald-100/90 text-base mt-1">{t.portal.subtitle}</p>
+          {ctx.isActing ? (
+            <p className="mt-2 text-base font-semibold text-amber-200">{t.portal.actingFor}</p>
+          ) : null}
         </div>
 
         {/* Balance Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="shadow bg-white border border-slate-100">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Net Account Balance</span>
+              <span className="text-sm font-semibold text-slate-600">{t.portal.balance.net}</span>
               <DollarSign className={`h-5 w-5 ${netBalance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`} />
             </CardHeader>
             <CardContent>
+              {/* Sign and word, never colour alone. */}
               <div className={`text-2xl font-bold ${netBalance >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                ${netBalance.toFixed(2)}
+                {netBalance >= 0 ? '+' : '−'}${Math.abs(netBalance).toFixed(2)}
+                <span className="ml-2 text-base font-semibold">
+                  {netBalance >= 0 ? t.portal.balance.credit : t.portal.balance.owing}
+                </span>
               </div>
-              <p className="text-xs text-slate-400 mt-1">Calculated sum of all contributions</p>
+              <p className="text-sm text-slate-600 mt-1">{t.portal.balance.netHelp}</p>
             </CardContent>
           </Card>
 
           <Card className="shadow bg-white border border-slate-100">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Advance Balance</span>
-              <Badge variant="secondary" className="bg-emerald-50 text-emerald-800 hover:bg-emerald-50">Ledger</Badge>
+              <span className="text-sm font-semibold text-slate-600">{t.portal.balance.advance}</span>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-slate-800">${advanceTotal.toFixed(2)}</div>
-              <p className="text-xs text-slate-400 mt-1">Excess contributions held</p>
+              <p className="text-sm text-slate-600 mt-1">{t.portal.balance.advanceHelp}</p>
             </CardContent>
           </Card>
 
           <Card className="shadow bg-white border border-slate-100">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Registration Fee</span>
-              {registrationTotal > 0 ? (
-                <Badge className="bg-emerald-100 text-emerald-800 border-none font-semibold">PAID</Badge>
-              ) : (
-                <Badge className="bg-rose-100 text-rose-800 border-none font-semibold">UNPAID</Badge>
-              )}
+              <span className="text-sm font-semibold text-slate-600">{t.portal.balance.registration}</span>
+              {/* Compliance status is withheld until the roster is confirmed —
+                  the imported figures do not yet reconcile. */}
+              {showStatus ? (
+                registrationTotal > 0 ? (
+                  <Badge className="bg-emerald-100 text-emerald-800 border-none font-semibold">
+                    {t.portal.balance.paid}
+                  </Badge>
+                ) : (
+                  <Badge className="bg-rose-100 text-rose-800 border-none font-semibold">
+                    {t.portal.balance.unpaid}
+                  </Badge>
+                )
+              ) : null}
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-slate-800">${registrationTotal.toFixed(2)}</div>
-              <p className="text-xs text-slate-400 mt-1">One-time registration status</p>
+              <p className="text-sm text-slate-600 mt-1">{t.portal.balance.registrationHelp}</p>
             </CardContent>
           </Card>
 
           <Card className="shadow bg-white border border-slate-100">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Membership Fee</span>
-              {membershipTotal > 0 ? (
-                <Badge className="bg-emerald-100 text-emerald-800 border-none font-semibold">PAID</Badge>
-              ) : (
-                <Badge className="bg-rose-100 text-rose-800 border-none font-semibold">UNPAID</Badge>
-              )}
+              <span className="text-sm font-semibold text-slate-600">{t.portal.balance.membership}</span>
+              {showStatus ? (
+                membershipTotal > 0 ? (
+                  <Badge className="bg-emerald-100 text-emerald-800 border-none font-semibold">
+                    {t.portal.balance.paid}
+                  </Badge>
+                ) : (
+                  <Badge className="bg-rose-100 text-rose-800 border-none font-semibold">
+                    {t.portal.balance.unpaid}
+                  </Badge>
+                )
+              ) : null}
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-slate-800">${membershipTotal.toFixed(2)}</div>
-              <p className="text-xs text-slate-400 mt-1">Annual membership dues status</p>
+              <p className="text-sm text-slate-600 mt-1">{t.portal.balance.membershipHelp}</p>
             </CardContent>
           </Card>
         </div>
@@ -203,7 +227,7 @@ export default async function PortalPage() {
             <Card className="shadow-md bg-white border border-slate-100">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle className="text-lg font-bold text-slate-900">Transaction Statements</CardTitle>
+                  <CardTitle className="text-lg font-bold text-slate-900">{t.portal.transactions.title}</CardTitle>
                   <CardDescription>Financial record history and ledger updates</CardDescription>
                 </div>
                 <History className="h-5 w-5 text-slate-400" />
@@ -251,14 +275,14 @@ export default async function PortalPage() {
             {/* Quick Actions */}
             <Card className="shadow-md bg-white border border-slate-100">
               <CardHeader>
-                <CardTitle className="text-lg font-bold text-slate-900">Quick Portal Actions</CardTitle>
-                <CardDescription>Fill in digital forms and agreements</CardDescription>
+                <CardTitle className="text-lg font-bold text-slate-900">{t.portal.actions.title}</CardTitle>
+                <CardDescription>{t.portal.actions.description}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Link href="/portal/forms" className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 text-slate-700 transition">
                   <span className="flex items-center text-sm font-semibold gap-2">
                     <FileText className="h-4 w-4 text-emerald-600" />
-                    Forms Directory
+                    {t.portal.actions.forms}
                   </span>
                   <ChevronRight className="h-4 w-4 text-slate-400" />
                 </Link>
@@ -266,7 +290,7 @@ export default async function PortalPage() {
                   <Link href="/portal/access" className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 text-slate-700 transition">
                     <span className="flex items-center text-sm font-semibold gap-2">
                       <FileText className="h-4 w-4 text-emerald-600" />
-                      Wasaidizi wangu / My helpers
+                      {t.portal.actions.helpers}
                     </span>
                     <ChevronRight className="h-4 w-4 text-slate-400" />
                   </Link>
@@ -274,7 +298,7 @@ export default async function PortalPage() {
                 <Link href="/membership" className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 text-slate-700 transition">
                   <span className="flex items-center text-sm font-semibold gap-2">
                     <FileText className="h-4 w-4 text-emerald-600" />
-                    Renew Membership Agreement
+                    {t.portal.actions.renew}
                   </span>
                   <ChevronRight className="h-4 w-4 text-slate-400" />
                 </Link>
@@ -285,7 +309,7 @@ export default async function PortalPage() {
             <Card className="shadow-md bg-white border border-slate-100">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle className="text-lg font-bold text-slate-900">Profile Details</CardTitle>
+                  <CardTitle className="text-lg font-bold text-slate-900">{t.portal.profile.title}</CardTitle>
                   <CardDescription>Your registered contact details</CardDescription>
                 </div>
                 <User className="h-5 w-5 text-slate-400" />
@@ -311,7 +335,7 @@ export default async function PortalPage() {
             {/* Form Submissions Status */}
             <Card className="shadow-md bg-white border border-slate-100">
               <CardHeader>
-                <CardTitle className="text-lg font-bold text-slate-900">Submissions Status</CardTitle>
+                <CardTitle className="text-lg font-bold text-slate-900">{t.portal.submissions.title}</CardTitle>
                 <CardDescription>Recent form submission states</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">

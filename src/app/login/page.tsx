@@ -10,6 +10,7 @@ import {
 import { LoginForm } from '@/components/login-form';
 import { DemoSignIn, type DemoPersonaOption } from '@/components/demo-sign-in';
 import { isDemoMode, DEMO_PERSONAS } from '@/lib/demo';
+import { getTranslations } from '@/lib/i18n';
 
 /**
  * Server component so demo mode is decided on the server. When it is off the
@@ -17,7 +18,8 @@ import { isDemoMode, DEMO_PERSONAS } from '@/lib/demo';
  * rather than imported by the client component, the demo account identifiers
  * are not present in the production bundle either.
  */
-export default function LoginPage() {
+export default async function LoginPage() {
+  const t = await getTranslations();
   const demo = isDemoMode();
   const personas: DemoPersonaOption[] = demo
     ? Object.entries(DEMO_PERSONAS).map(([key, p]) => ({
@@ -37,10 +39,10 @@ export default function LoginPage() {
         <Card className="w-full max-w-md shadow-xl border-t-4 border-t-emerald-600 bg-white">
           <CardHeader className="space-y-1 text-center">
             <CardTitle className="text-2xl font-bold tracking-tight text-slate-900">
-              TSA Member Portal
+              {t.auth.title}
             </CardTitle>
             <CardDescription className="text-slate-500">
-              Sign in to view your balance and fill in forms
+              {t.auth.subtitle}
             </CardDescription>
           </CardHeader>
 
@@ -48,12 +50,12 @@ export default function LoginPage() {
 
           <CardFooter className="flex justify-center border-t border-slate-100 py-4 bg-slate-50/50">
             <p className="text-sm text-slate-600">
-              Want to join TSA?{' '}
+              {t.auth.joinPrompt}{' '}
               <a
                 href="/membership"
                 className="text-emerald-600 hover:text-emerald-700 font-semibold underline"
               >
-                Apply for membership
+                {t.auth.joinLink}
               </a>
             </p>
           </CardFooter>

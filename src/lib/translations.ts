@@ -214,6 +214,79 @@ export interface TranslationSchema {
     readTime: string;
     noPosts: string;
   };
+  portal: {
+    welcome: string;
+    subtitle: string;
+    actingFor: string;
+    balance: {
+      net: string;
+      netHelp: string;
+      advance: string;
+      advanceHelp: string;
+      registration: string;
+      registrationHelp: string;
+      membership: string;
+      membershipHelp: string;
+      paid: string;
+      unpaid: string;
+      credit: string;
+      owing: string;
+    };
+    transactions: {
+      title: string;
+      description: string;
+      empty: string;
+      date: string;
+      type: string;
+      amount: string;
+    };
+    profile: {
+      title: string;
+      phone: string;
+      address: string;
+      spouse: string;
+      notRecorded: string;
+    };
+    submissions: {
+      title: string;
+      empty: string;
+      pending: string;
+      processing: string;
+      approved: string;
+      rejected: string;
+    };
+    actions: {
+      title: string;
+      description: string;
+      forms: string;
+      helpers: string;
+      renew: string;
+    };
+    accountPending: { title: string; body: string; contact: string };
+    notFound: { title: string; body: string };
+    needHelp: string;
+  };
+  auth: {
+    title: string;
+    subtitle: string;
+    phoneLabel: string;
+    phoneHelp: string;
+    sendCode: string;
+    sending: string;
+    codeLabel: string;
+    codeHelp: string;
+    signIn: string;
+    verifying: string;
+    changeNumber: string;
+    useEmail: string;
+    chooseAccount: string;
+    chooseAccountHelp: string;
+    setUpAccount: string;
+    startAgain: string;
+    joinPrompt: string;
+    joinLink: string;
+    or: string;
+  };
 }
 
 export const translations: Record<Language, TranslationSchema> = {
@@ -487,6 +560,86 @@ export const translations: Record<Language, TranslationSchema> = {
       readTime: "min read",
       noPosts: "No articles found.",
     },
+    portal: {
+      welcome: "Welcome",
+      subtitle: "Your TSA account",
+      actingFor: "You are viewing this account as a helper.",
+      balance: {
+        net: "My balance",
+        netHelp: "Everything you have paid, added together",
+        advance: "Advance savings",
+        advanceHelp: "Held for you by TSA",
+        registration: "Joining fee",
+        registrationHelp: "One-time payment when you joined",
+        membership: "Yearly dues",
+        membershipHelp: "Paid every April",
+        paid: "PAID",
+        unpaid: "NOT PAID",
+        credit: "in credit",
+        owing: "owing",
+      },
+      transactions: {
+        title: "My payments",
+        description: "Everything recorded on your account",
+        empty: "No payments recorded yet.",
+        date: "Date",
+        type: "Type",
+        amount: "Amount",
+      },
+      profile: {
+        title: "My details",
+        phone: "Phone",
+        address: "Address",
+        spouse: "Husband / Wife",
+        notRecorded: "Not recorded",
+      },
+      submissions: {
+        title: "My forms",
+        empty: "You have not sent any forms yet.",
+        pending: "Waiting",
+        processing: "Being reviewed",
+        approved: "Approved",
+        rejected: "Not approved",
+      },
+      actions: {
+        title: "What would you like to do?",
+        description: "Forms and account settings",
+        forms: "Fill in a form",
+        helpers: "My helpers",
+        renew: "Renew my membership",
+      },
+      accountPending: {
+        title: "Account not linked yet",
+        body: "Your sign-in works, but it is not yet connected to your TSA member record.",
+        contact: "Please call a TSA leader so they can connect it.",
+      },
+      notFound: {
+        title: "Details not found",
+        body: "We could not find your member record. Please call a TSA leader.",
+      },
+      needHelp: "Need help? Call",
+    },
+    auth: {
+      title: "TSA Member Portal",
+      subtitle: "Sign in to see your balance and fill in forms",
+      phoneLabel: "Your phone number",
+      phoneHelp: "We will send you a code.",
+      sendCode: "Send me a code",
+      sending: "Sending...",
+      codeLabel: "Enter your code",
+      codeHelp: "We sent a 6-digit code.",
+      signIn: "Sign in",
+      verifying: "Checking...",
+      changeNumber: "Change number",
+      useEmail: "Sign in with email instead",
+      chooseAccount: "More than one account uses this phone",
+      chooseAccountHelp: "Which one is yours?",
+      setUpAccount: "Set up this account",
+      startAgain: "Start again",
+      joinPrompt: "Want to join TSA?",
+      joinLink: "Apply for membership",
+      or: "Or",
+    },
   },
   sw: {
     nav: {
@@ -757,6 +910,86 @@ export const translations: Record<Language, TranslationSchema> = {
       author: "Mwandishi",
       readTime: "dakika za kusoma",
       noPosts: "Hakuna makala yaliyopatikana.",
+    },
+    portal: {
+      welcome: "Karibu",
+      subtitle: "Akaunti yako ya TSA",
+      actingFor: "Unaangalia akaunti hii kama msaidizi.",
+      balance: {
+        net: "Salio langu",
+        netHelp: "Jumla ya kila ulicholipa",
+        advance: "Akiba tangulizi",
+        advanceHelp: "Fedha zako zilizohifadhiwa na TSA",
+        registration: "Kiingilio",
+        registrationHelp: "Malipo ya mara moja ulipojiunga",
+        membership: "Ada ya mwaka",
+        membershipHelp: "Hulipwa kila mwezi wa Aprili",
+        paid: "IMELIPWA",
+        unpaid: "HAIJALIPWA",
+        credit: "salio zuri",
+        owing: "deni",
+      },
+      transactions: {
+        title: "Malipo yangu",
+        description: "Kila kitu kilichoandikwa kwenye akaunti yako",
+        empty: "Hakuna malipo yaliyoandikwa bado.",
+        date: "Tarehe",
+        type: "Aina",
+        amount: "Kiasi",
+      },
+      profile: {
+        title: "Taarifa zangu",
+        phone: "Simu",
+        address: "Anuani",
+        spouse: "Mume / Mke",
+        notRecorded: "Haijaandikwa",
+      },
+      submissions: {
+        title: "Fomu zangu",
+        empty: "Hujatuma fomu yoyote bado.",
+        pending: "Inasubiri",
+        processing: "Inaangaliwa",
+        approved: "Imekubaliwa",
+        rejected: "Haikukubaliwa",
+      },
+      actions: {
+        title: "Ungependa kufanya nini?",
+        description: "Fomu na mipangilio ya akaunti",
+        forms: "Jaza fomu",
+        helpers: "Wasaidizi wangu",
+        renew: "Huisha uanachama wangu",
+      },
+      accountPending: {
+        title: "Akaunti bado haijaunganishwa",
+        body: "Umeingia, lakini akaunti yako bado haijaunganishwa na kumbukumbu zako za uanachama.",
+        contact: "Tafadhali mpigie simu kiongozi wa TSA ili aiunganishe.",
+      },
+      notFound: {
+        title: "Taarifa hazikupatikana",
+        body: "Hatukuweza kupata kumbukumbu zako. Tafadhali mpigie simu kiongozi wa TSA.",
+      },
+      needHelp: "Una tatizo? Piga simu",
+    },
+    auth: {
+      title: "Ukurasa wa Mwanachama",
+      subtitle: "Ingia uone salio lako na kujaza fomu",
+      phoneLabel: "Namba yako ya simu",
+      phoneHelp: "Tutakutumia namba ya uthibitisho.",
+      sendCode: "Nitumie namba",
+      sending: "Inatuma...",
+      codeLabel: "Weka namba ya uthibitisho",
+      codeHelp: "Tumekutumia namba ya tarakimu 6.",
+      signIn: "Ingia",
+      verifying: "Inathibitisha...",
+      changeNumber: "Badilisha namba",
+      useEmail: "Ingia kwa barua pepe",
+      chooseAccount: "Akaunti zaidi ya moja zinatumia namba hii",
+      chooseAccountHelp: "Ipi ni yako?",
+      setUpAccount: "Anzisha akaunti hii",
+      startAgain: "Anza upya",
+      joinPrompt: "Ungependa kujiunga na TSA?",
+      joinLink: "Omba uanachama",
+      or: "Au",
     },
   },
 };
