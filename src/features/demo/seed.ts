@@ -225,6 +225,11 @@ export async function clearAllData(client: PrismaClient = defaultDb as PrismaCli
   await client.ledgerEntry.updateMany({ data: { reversesId: null } });
   await client.ledgerEntry.deleteMany({});
   await client.memberBalance.deleteMany({});
+  await client.bankTransaction.deleteMany({});
+  await client.bankImport.deleteMany({});
+  await client.paymentAllocation.deleteMany({});
+  await client.payment.deleteMany({});
+  await client.payLink.deleteMany({});
   await client.assessment.deleteMany({});
   await client.claim.deleteMany({});
   await client.transaction.deleteMany({});

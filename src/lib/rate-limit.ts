@@ -57,6 +57,14 @@ export const POLICIES = {
   publicFormIp: { scope: 'form:public:ip', limit: 5, windowMs: 24 * 60 * 60_000 },
   publicFormPhone: { scope: 'form:public:phone', limit: 3, windowMs: 24 * 60 * 60_000 },
   contactIp: { scope: 'form:contact:ip', limit: 3, windowMs: 60 * 60_000 },
+
+  /**
+   * Pay links need no sign-in, so the token is the only secret. Opening one is
+   * limited per IP (guessing tokens), and reporting a payment through one per
+   * link (so a leaked link cannot flood the Treasurer's queue).
+   */
+  payLinkIp: { scope: 'paylink:ip', limit: 60, windowMs: 60 * 60_000 },
+  payLinkReport: { scope: 'paylink:report', limit: 5, windowMs: 24 * 60 * 60_000 },
 } as const satisfies Record<string, RateLimitPolicy>;
 
 function windowStartFor(windowMs: number, now: number): Date {

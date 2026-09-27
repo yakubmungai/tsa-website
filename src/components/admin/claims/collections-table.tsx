@@ -19,7 +19,7 @@ import { usePortalStrings } from '@/components/portal/use-portal-strings';
 import { MoneyAmount } from '@/components/portal/money';
 import { StatusBadge, type Tone } from '@/components/portal/status-badge';
 import { cn } from '@/lib/utils';
-import { WhatsAppButton } from './whatsapp-button';
+import { WhatsAppButton, withPayLink } from './whatsapp-button';
 
 export interface CollectionRow {
   id: string;
@@ -111,7 +111,7 @@ export function CollectionsTable({ rows, today, demo }: { rows: CollectionRow[];
               {r.outstandingCents > 0 && r.state !== 'UPCOMING' ? (
                 <>
                   <RecordPaymentDialog row={r} today={today} />
-                  <WhatsAppButton message={r.reminder} phoneE164={r.phoneE164} label={t.adminClaims.remind} demo={demo} />
+                  <WhatsAppButton message={r.reminder} phoneE164={r.phoneE164} label={t.adminClaims.remind} demo={demo} payLinkFor={r.memberId} />
                 </>
               ) : null}
               {r.state === 'OVERDUE' || r.state === 'EXCUSED' ? <ExcuseDialog row={r} /> : null}
@@ -267,13 +267,19 @@ function ExcuseDialog({ row }: { row: CollectionRow }) {
 function RemindAll({ rows, demo }: { rows: CollectionRow[]; demo: boolean }) {
   const t = usePortalStrings();
   const [i, setI] = useState(0);
+  const [text, setText] = useState('');
   const row = rows[Math.min(i, rows.length - 1)];
-  const url = row.phoneE164
-    ? `https://wa.me/${row.phoneE164.replace(/[^\d]/g, '')}?text=${encodeURIComponent(row.reminder)}`
-    : null;
+  const url = row.phoneE164 ? `https://wa.me/${row.phoneE164.replace(/[^\d]/g, '')}?text=${encodeURIComponent(text)}` : null;
+
+  // Each member's message gets their own pay link as it comes up.
+  async function show(n: number) {
+    setI(n);
+    setText('…');
+    setText(await withPayLink(rows[n].reminder, rows[n].memberId));
+  }
 
   return (
-    <Dialog onOpenChange={(o) => o && setI(0)}>
+    <Dialog onOpenChange={(o) => o && show(0)}>
       <DialogTrigger asChild>
         <button type="button" className="btn-shimmer min-h-12 rounded-xl px-4 text-base font-bold text-primary-foreground">
           {t.adminClaims.remindAll} ({rows.length})
@@ -284,13 +290,15 @@ function RemindAll({ rows, demo }: { rows: CollectionRow[]; demo: boolean }) {
           <DialogTitle className="font-serif text-2xl">{row.names}</DialogTitle>
           <DialogDescription className="text-base">{t.adminClaims.remindingOf(i + 1, rows.length)}</DialogDescription>
         </DialogHeader>
-        <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-xl bg-muted p-4 font-sans text-base">{row.reminder}</pre>
+        <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-xl bg-muted p-4 font-sans text-base">{text}</pre>
         {!demo && url ? (
           <a
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => setI((n) => Math.min(n + 1, rows.length - 1))}
+            onClick={() => {
+              if (i < rows.length - 1) void show(i + 1);
+            }}
             className="btn-shimmer inline-flex min-h-12 items-center justify-center rounded-xl text-lg font-bold text-primary-foreground"
           >
             {t.adminClaims.openWhatsapp}
@@ -299,7 +307,7 @@ function RemindAll({ rows, demo }: { rows: CollectionRow[]; demo: boolean }) {
         <div className="flex justify-between gap-2">
           <button
             type="button"
-            onClick={() => setI((n) => Math.max(0, n - 1))}
+            onClick={() => void show(Math.max(0, i - 1))}
             disabled={i === 0}
             className="inline-flex min-h-12 items-center gap-2 rounded-xl border-2 border-border px-4 text-base font-semibold disabled:opacity-40"
           >
@@ -308,7 +316,7 @@ function RemindAll({ rows, demo }: { rows: CollectionRow[]; demo: boolean }) {
           </button>
           <button
             type="button"
-            onClick={() => setI((n) => Math.min(rows.length - 1, n + 1))}
+            onClick={() => void show(Math.min(rows.length - 1, i + 1))}
             disabled={i >= rows.length - 1}
             className="inline-flex min-h-12 items-center gap-2 rounded-xl border-2 border-border px-4 text-base font-semibold disabled:opacity-40"
           >

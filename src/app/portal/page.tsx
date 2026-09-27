@@ -154,6 +154,13 @@ export default async function PortalPage() {
   ]);
 
   const asOf = standing.asOf;
+  const canPay = checkPermission(ctx, 'MAKE_PAYMENTS');
+  const payHref = canPay ? '/portal/pay' : '#owe';
+  const pendingPayments = await db.payment.aggregate({
+    where: { memberId, status: { in: ['REPORTED', 'MATCHED'] } },
+    _sum: { amountCents: true },
+  });
+  const pendingCents = pendingPayments._sum.amountCents ?? 0;
   const shares = await loadShares({ memberId }, asOf);
   const claimOf = new Map(shareRows.map((r) => [r.id, r.claim]));
   const recent = asOf.getTime() - 30 * 24 * 3600 * 1000;
@@ -187,19 +194,29 @@ export default async function PortalPage() {
   });
 
   const hero = {
-    ok: { headline: t.status.ok, body: t.status.okBody },
+    ok: {
+      headline: t.status.ok,
+      body: t.status.okBody,
+      detail: pendingCents > 0 ? t.status.pending(formatUSD(pendingCents)) : undefined,
+    },
     owe: {
       headline: t.status.owe(formatUSD(standing.outstandingCents)),
       body: nextDue ? t.status.oweBy(dateFmt.format(nextDue.dueAt)) : t.status.oweBody,
-      detail: nextDue ? t.status.oweBody : undefined,
-      action: { href: '#owe', label: t.status.payNow },
+      detail: pendingCents > 0 ? t.status.pending(formatUSD(pendingCents)) : nextDue ? t.status.oweBody : undefined,
+      action: { href: payHref, label: t.status.payNow },
     },
     low: {
       headline: t.status.low,
       body: t.status.lowBody(formatUSD(topUp || standing.shortfallCents)),
-      action: { href: '#owe', label: t.status.topUp },
+      detail: pendingCents > 0 ? t.status.pending(formatUSD(pendingCents)) : undefined,
+      action: { href: payHref, label: t.status.topUp },
     },
-    neutral: { headline: t.status.neutral, body: t.status.neutralBody },
+    neutral: {
+      headline: t.status.neutral,
+      body: t.status.neutralBody,
+      detail: pendingCents > 0 ? t.status.pending(formatUSD(pendingCents)) : undefined,
+      action: canPay ? { href: '/portal/pay', label: t.pay.title } : undefined,
+    },
   }[state];
 
   const duesYearLabel = `${standing.duesYear}/${String(standing.duesYear + 1).slice(2)}`;

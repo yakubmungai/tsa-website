@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { createPayLink } from '@/features/payments/admin-actions';
 import { Check, Copy, MessageCircle } from 'lucide-react';
 import {
   Dialog,
@@ -13,6 +14,16 @@ import {
 import { usePortalStrings } from '@/components/portal/use-portal-strings';
 import { cn } from '@/lib/utils';
 
+/** Stands in for a member's personal pay link until the message is opened. */
+export const PAY_LINK_PLACEHOLDER = '{{PAY_LINK}}';
+
+/** Swap the placeholder for a freshly made pay link for this member. */
+export async function withPayLink(message: string, memberId?: string): Promise<string> {
+  if (!memberId || !message.includes(PAY_LINK_PLACEHOLDER)) return message;
+  const res = await createPayLink({ memberId });
+  return message.replace(PAY_LINK_PLACEHOLDER, res.success ? res.data.url : '');
+}
+
 /**
  * A ready-written WhatsApp message: shown in a dialog to check and copy, with
  * a button that opens WhatsApp with it filled in (to one member, or to choose
@@ -22,20 +33,24 @@ import { cn } from '@/lib/utils';
  * members' numbers are invented, and a real stranger might own one.
  */
 export function WhatsAppButton({
-  message,
+  message: template,
   phoneE164,
   label,
   demo,
   variant = 'outline',
+  payLinkFor,
 }: {
   message: string;
   phoneE164?: string | null;
   label: string;
   demo: boolean;
   variant?: 'outline' | 'primary';
+  /** Member whose personal pay link goes into the message, made on open. */
+  payLinkFor?: string;
 }) {
   const t = usePortalStrings();
   const [copied, setCopied] = useState(false);
+  const [message, setMessage] = useState(template.replace(PAY_LINK_PLACEHOLDER, '…'));
   const url = phoneE164
     ? `https://wa.me/${phoneE164.replace(/[^\d]/g, '')}?text=${encodeURIComponent(message)}`
     : `https://wa.me/?text=${encodeURIComponent(message)}`;
@@ -51,7 +66,11 @@ export function WhatsAppButton({
   }
 
   return (
-    <Dialog>
+    <Dialog
+      onOpenChange={async (open) => {
+        if (open) setMessage(await withPayLink(template, payLinkFor));
+      }}
+    >
       <DialogTrigger asChild>
         <button
           type="button"

@@ -23,3 +23,19 @@ import 'server-only';
 export function showComplianceStatus(): boolean {
   return process.env.ROSTER_CONFIRMED === 'true';
 }
+
+/**
+ * Whether members can pay by card, Apple/Google Pay or bank debit (Stripe).
+ *
+ * Built but off until TSA has its own Stripe account. All three must be set —
+ * a flag without keys, or keys without the flag, keeps every card button,
+ * the checkout action and the webhook hidden. See README, "Turning on card
+ * payments".
+ */
+export function isCardPaymentEnabled(): boolean {
+  return (
+    process.env.STRIPE_ENABLED === 'true' &&
+    Boolean(process.env.STRIPE_SECRET_KEY) &&
+    Boolean(process.env.STRIPE_WEBHOOK_SECRET)
+  );
+}

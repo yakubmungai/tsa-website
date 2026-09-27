@@ -54,13 +54,15 @@ export async function overdueByMember(asOf: Date): Promise<Map<string, number>> 
 /** What is waiting for an officer, for the tab badges and the Today inbox. */
 export const getAdminCounts = cache(async (): Promise<AdminCounts> => {
   const asOf = await now();
-  const [forms, claims, collecting, overdue] = await Promise.all([
+  const [forms, claims, collecting, overdue, reportedPayments, unassignedDeposits] = await Promise.all([
     db.formSubmission.count({ where: { status: 'PENDING' } }),
     db.claim.count({ where: { status: { in: ['SUBMITTED', 'UNDER_REVIEW'] } } }),
     db.claim.count({ where: { status: 'COLLECTING' } }),
     overdueByMember(asOf),
+    db.payment.count({ where: { status: { in: ['REPORTED', 'MATCHED'] } } }),
+    db.bankTransaction.count({ where: { matchedPaymentId: null, ignoredAt: null } }),
   ]);
-  const payments = 0;
+  const payments = reportedPayments + unassignedDeposits;
   const boardReferrals = [...overdue.entries()]
     .filter(([, n]) => n >= MISSED_CONTRIBUTIONS_BOARD_REFERRAL)
     .map(([memberId, missed]) => ({ memberId, missed }));

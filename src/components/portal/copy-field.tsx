@@ -42,7 +42,7 @@ export function CopyField({
         <p className="text-sm font-semibold text-muted-foreground">{label}</p>
         <p
           className={cn(
-            'break-all font-semibold text-foreground',
+            'break-words font-semibold text-foreground',
             emphasis ? 'font-mono text-2xl tracking-wide' : 'text-lg'
           )}
         >

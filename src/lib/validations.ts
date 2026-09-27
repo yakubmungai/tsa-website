@@ -249,3 +249,51 @@ export const payoutSchema = z
     paidTo: z.string().trim().min(2, 'Who was paid?').max(200),
   })
   .strict();
+
+// ── Payments (Stage 4) ──────────────────────────────────────────────────────
+
+/** How a member says they paid. CARD/ACH come only from Stripe, never a form. */
+export const REPORTED_METHODS = ['ZELLE', 'CASHAPP', 'BANK_TRANSFER', 'CHECK', 'CASH'] as const;
+
+const paymentFields = {
+  amount: centsFromInput.refine((c) => c > 0, 'Enter an amount greater than zero'),
+  paidOn: isoDateInput,
+  method: z.enum(REPORTED_METHODS),
+  payerName: optionalText(160),
+  memo: optionalText(200),
+  preference: z.enum(['AUTO', 'ADVANCE']).default('AUTO'),
+};
+
+export const reportPaymentSchema = z.object(paymentFields).strict();
+
+export const payLinkReportSchema = z
+  .object({ ...paymentFields, token: z.string().regex(/^[A-Za-z0-9_-]{16,64}$/) })
+  .strict();
+
+export const cardCheckoutSchema = z
+  .object({
+    amount: centsFromInput.refine((c) => c >= 100, 'The smallest card payment is $1'),
+    preference: z.enum(['AUTO', 'ADVANCE']).default('AUTO'),
+    token: z.string().regex(/^[A-Za-z0-9_-]{16,64}$/).optional(),
+  })
+  .strict();
+
+export const paymentIdSchema = z.object({ paymentId: z.string().uuid() }).strict();
+
+export const rejectPaymentSchema = z
+  .object({ paymentId: z.string().uuid(), reason: z.string().trim().min(3, 'Give a short reason').max(300) })
+  .strict();
+
+export const adminRecordPaymentSchema = z
+  .object({ ...paymentFields, memberId: z.string().uuid('Choose a member') })
+  .strict();
+
+export const bankAssignSchema = z
+  .object({ bankId: z.string().uuid(), memberId: z.string().uuid('Choose a member') })
+  .strict();
+
+export const bankIgnoreSchema = z
+  .object({ bankId: z.string().uuid(), reason: z.string().trim().min(3, 'Give a short reason').max(200) })
+  .strict();
+
+export const memberIdOnlySchema = z.object({ memberId: z.string().uuid() }).strict();

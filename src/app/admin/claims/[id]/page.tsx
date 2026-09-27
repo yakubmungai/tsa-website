@@ -20,7 +20,7 @@ import { DecisionPanel } from '@/components/admin/claims/decision-panel';
 import { AnnouncePanel } from '@/components/admin/claims/announce-panel';
 import { CollectionsTable, type CollectionRow } from '@/components/admin/claims/collections-table';
 import { PayoutPanel } from '@/components/admin/claims/payout-panel';
-import { WhatsAppButton } from '@/components/admin/claims/whatsapp-button';
+import { PAY_LINK_PLACEHOLDER, WhatsAppButton } from '@/components/admin/claims/whatsapp-button';
 import { PageHeader } from '@/components/portal/page-header';
 import { SectionCard } from '@/components/portal/section-card';
 import { StatusBadge } from '@/components/portal/status-badge';
@@ -115,7 +115,8 @@ export default async function AdminClaimPage({ params }: { params: Promise<{ id:
         amount: formatUSD(s.outstandingCents),
         deadline: fmt.format(s.dueAt),
         overdue: s.state === 'OVERDUE',
-        link,
+        // Replaced with the member's own pay link when the officer opens it.
+        link: PAY_LINK_PLACEHOLDER,
       }),
     };
   });
