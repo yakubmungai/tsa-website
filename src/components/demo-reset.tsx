@@ -46,7 +46,7 @@ export function DemoReset() {
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button variant="outline" className="min-h-12 gap-2 border-2 border-warning/50 text-base font-semibold text-foreground hover:bg-warning/10">
+        <Button variant="outline" className="h-auto min-h-12 w-full gap-2 whitespace-normal border-2 border-warning/50 py-2 text-base font-semibold text-foreground hover:bg-warning/10">
           <RotateCcw className="h-4 w-4" />
           Rudisha data ya majaribio / Reset demo data
         </Button>

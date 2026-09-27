@@ -183,7 +183,7 @@ export default async function DemoControlPage() {
         title="Mwongozo wa majaribio"
         subtitle="Kila kitu hapa si halisi, na hakuna kinachowagusa wanachama. Jaribu bila hofu — unaweza kurudisha mwanzo wakati wowote. / Nothing here is real and nothing affects members. Explore freely — you can reset at any time."
       />
-      <div className="grid gap-8 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-5">
         <div className="space-y-8 lg:col-span-3">
           <SectionCard title="Jaribu haya / Things to try" icon={<ClipboardList className="h-5 w-5 text-primary" />}>
             <ScenarioChecklist scenarios={scenarios} />

@@ -64,7 +64,7 @@ export default async function AdminPaymentsPage() {
   return (
     <AdminShell active="payments">
       <PageHeader title={t.adminPayments.title} subtitle={t.adminPayments.subtitle} />
-      <div className="grid gap-8 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-5">
         <div className="space-y-8 lg:col-span-3">
           <SectionCard title={t.adminPayments.upload} icon={<Upload className="h-5 w-5 text-primary" />}>
             <BankUpload />

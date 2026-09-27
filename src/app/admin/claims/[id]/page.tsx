@@ -167,7 +167,7 @@ export default async function AdminClaimPage({ params }: { params: Promise<{ id:
           <Stepper status={status} t={t} />
         </SectionCard>
 
-        <div className="grid gap-8 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-5">
           <div className="space-y-8 lg:col-span-3">
             {/* What happens next, first. */}
             {status === 'SUBMITTED' || status === 'UNDER_REVIEW' ? (

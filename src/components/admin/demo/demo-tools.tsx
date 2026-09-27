@@ -173,7 +173,7 @@ export function ScenarioChecklist({ scenarios }: { scenarios: Scenario[] }) {
               >
                 {done[s.id] ? <Check className="h-5 w-5" aria-hidden /> : i + 1}
               </button>
-              <div className="space-y-2">
+              <div className="min-w-0 space-y-2 break-words">
                 <p className="text-lg font-semibold">
                   {s.sw}
                   <span className="block text-base font-normal text-muted-foreground">{s.en}</span>

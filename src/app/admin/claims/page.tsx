@@ -46,8 +46,8 @@ export default async function AdminClaimsPage({ searchParams }: { searchParams: 
       aria-current={(key === 'all') === all ? 'page' : undefined}
       className={
         (key === 'all') === all
-          ? 'min-h-10 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground'
-          : 'min-h-10 rounded-full border border-border px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-muted'
+          ? 'inline-flex min-h-12 items-center rounded-full bg-primary px-5 text-base font-semibold text-primary-foreground'
+          : 'inline-flex min-h-12 items-center rounded-full border border-border px-5 text-base font-semibold text-muted-foreground hover:bg-muted'
       }
     >
       {label}

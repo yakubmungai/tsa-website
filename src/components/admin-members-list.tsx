@@ -229,8 +229,8 @@ export function AdminMembersList({ members }: { members: DirectoryMember[] }) {
               aria-pressed={filter === f.key}
               className={
                 filter === f.key
-                  ? 'min-h-10 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground'
-                  : 'min-h-10 rounded-full border border-border px-4 text-sm font-semibold text-muted-foreground hover:bg-muted'
+                  ? 'min-h-12 rounded-full bg-primary px-5 text-base font-semibold text-primary-foreground'
+                  : 'min-h-12 rounded-full border border-border px-5 text-base font-semibold text-muted-foreground hover:bg-muted'
               }
             >
               {f.label}
