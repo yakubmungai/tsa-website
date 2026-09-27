@@ -54,8 +54,8 @@ describe('computeStanding — Art 18.9 tiers', () => {
     const s = computeStanding({ entries: fullyPaid, joinedAt: null, asOf: NOW });
     expect(s.standingCents).toBe(MIN_STANDING_CENTS);
     expect(s.tier).toBe('FULL');
-    expect(s.benefits.deathMemberCents).toBe(1_000_000);
-    expect(s.benefits.hardshipMemberCents).toBe(300_000);
+    expect(s.benefits.majorDeathCents).toBe(1_000_000);
+    expect(s.benefits.relativeOrHardshipCents).toBe(300_000);
     expect(s.shortfallCents).toBe(0);
   });
 
@@ -66,8 +66,9 @@ describe('computeStanding — Art 18.9 tiers', () => {
       asOf: NOW,
     });
     expect(s.tier).toBe('REDUCED');
-    expect(s.benefits.deathMemberCents).toBe(150_000);
-    expect(s.benefits.deathFamilyCents).toBe(500_000);
+    // Art 18.9: "chini ya $125 … mwanachama $1,500 na familia $5,000".
+    expect(s.benefits.majorDeathCents).toBe(500_000);
+    expect(s.benefits.relativeOrHardshipCents).toBe(150_000);
     expect(s.shortfallCents).toBe(4_000); // $40 to reach $125
   });
 
@@ -78,14 +79,15 @@ describe('computeStanding — Art 18.9 tiers', () => {
       asOf: NOW,
     });
     expect(s.tier).toBe('MINIMAL');
-    expect(s.benefits.deathMemberCents).toBe(200_000);
-    expect(s.benefits.hardshipMemberCents).toBe(50_000);
+    expect(s.benefits.majorDeathCents).toBe(200_000);
+    expect(s.benefits.relativeOrHardshipCents).toBe(50_000);
   });
 
   it('VOLUNTARY when there is nothing on account — kihiari only', () => {
     const s = computeStanding({ entries: [], joinedAt: null, asOf: NOW });
     expect(s.tier).toBe('VOLUNTARY');
-    expect(s.benefits.deathMemberCents).toBe(0);
+    expect(s.benefits.majorDeathCents).toBe(0);
+    expect(s.benefits.relativeOrHardshipCents).toBe(0);
     expect(s.shortfallCents).toBe(MIN_STANDING_CENTS);
   });
 
@@ -232,5 +234,41 @@ describe('suggestedTopUpCents', () => {
     });
     // $100 shortfall + $19.48 outstanding = $119.48, rounded up to $125.
     expect(suggestedTopUpCents(s)).toBe(12_500);
+  });
+});
+
+describe('computeStanding — as of a date', () => {
+  it('takes the tier on the event date, ignoring later top-ups', () => {
+    const eventDate = new Date('2026-06-01T12:00:00Z');
+    const entries = [
+      entry('ADVANCE_DEPOSIT', 40),
+      entry('ANNUAL_DUES', 25),
+      // Topped up after the event — must not lift the tier for that event.
+      entry('ADVANCE_DEPOSIT', 60, new Date('2026-06-10T12:00:00Z')),
+    ];
+    expect(computeStanding({ entries, joinedAt: null, asOf: eventDate }).tier).toBe('REDUCED');
+    expect(computeStanding({ entries, joinedAt: null, asOf: NOW }).tier).toBe('FULL');
+  });
+});
+
+describe('computeStanding — payouts', () => {
+  it('keeps payouts to the member out of what they hold', () => {
+    const s = computeStanding({
+      entries: [...fullyPaid, entry('BENEFIT_PAYOUT', -3000)],
+      joinedAt: null,
+      asOf: NOW,
+    });
+    expect(s.netCents).toBe(22_500);
+    expect(s.receivedCents).toBe(300_000);
+    expect(s.tier).toBe('FULL');
+  });
+
+  it('drops a reversed payout from what was received', () => {
+    const s = computeStanding({
+      entries: [...fullyPaid, entry('BENEFIT_PAYOUT', -3000, APRIL_2026, true)],
+      joinedAt: null,
+      asOf: NOW,
+    });
+    expect(s.receivedCents).toBe(0);
   });
 });

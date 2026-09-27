@@ -42,7 +42,14 @@ export interface StandingInput {
 }
 
 export interface MemberStanding {
+  /** What the member holds with TSA: everything except payouts to them. */
   netCents: number;
+  /**
+   * Payouts the member has received — mafao, memorial and milestone grants.
+   * Art 5.4 / 17: a departing member repays what they received minus what they
+   * contributed, so this is kept apart from what they hold.
+   */
+  receivedCents: number;
   advanceCents: number;
   entryFeeCents: number;
   duesCents: number;
@@ -102,6 +109,12 @@ export function duesYearFor(date: Date): number {
   return month >= DUES_MONTH ? year : year - 1;
 }
 
+/**
+ * Money TSA paid out *to* the member. These leave the association, not the
+ * member's account, so they must not reduce what the member holds.
+ */
+export const PAYOUT_ACCOUNTS = new Set(['BENEFIT_PAYOUT', 'MEMORIAL_GRANT', 'MILESTONE_GRANT']);
+
 function sumFor(entries: LedgerEntryLike[], account: string): number {
   return entries
     .filter((e) => e.voidedAt === null)
@@ -139,7 +152,10 @@ function tierFor(standingCents: number, advanceCents: number, duesCents: number)
 }
 
 export function computeStanding(input: StandingInput): MemberStanding {
-  const { entries, asOf } = input;
+  const { asOf } = input;
+  // Only what had happened by `asOf`. Art 18.9 tiers are taken on the date of
+  // the event, so a top-up made afterwards must not raise the tier.
+  const entries = input.entries.filter((e) => e.occurredAt <= asOf);
 
   const duesYear = duesYearFor(asOf);
 
@@ -149,9 +165,14 @@ export function computeStanding(input: StandingInput): MemberStanding {
   // date, which would need the same timezone care all over again.
   const duesCents = sumForCycle(entries, 'ANNUAL_DUES', duesYear);
 
-  const netCents = entries
-    .filter((e) => e.voidedAt === null)
+  const live = entries.filter((e) => e.voidedAt === null);
+  const netCents = live
+    .filter((e) => !PAYOUT_ACCOUNTS.has(e.account))
     .reduce((total, e) => total + e.amountCents, 0);
+  // Payouts are stored as negative amounts (money out); report them positive.
+  const receivedCents = live
+    .filter((e) => PAYOUT_ACCOUNTS.has(e.account))
+    .reduce((total, e) => total - e.amountCents, 0);
 
   // Only positive advance counts toward standing — an overdrawn float does not
   // offset paid dues.
@@ -166,6 +187,7 @@ export function computeStanding(input: StandingInput): MemberStanding {
 
   return {
     netCents,
+    receivedCents,
     advanceCents,
     entryFeeCents,
     duesCents,
