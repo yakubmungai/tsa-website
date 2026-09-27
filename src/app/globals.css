@@ -26,6 +26,12 @@
     --accent-foreground: 210 11% 15%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
+    /* Status colours for the portal: "uko sawa" and "unadaiwa". Always shown
+       with words and an icon, never colour alone. */
+    --success: 133 55% 34%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 42%;
+    --warning-foreground: 0 0% 100%;
     --border: 40 12% 88%;
     --input: 40 12% 88%;
     --ring: 133 55% 40%;
@@ -61,6 +67,10 @@
     --accent-foreground: 210 11% 10%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
+    --success: 133 50% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 210 11% 10%;
     --border: 210 11% 20%;
     --input: 210 11% 20%;
     --ring: 133 55% 45%;
@@ -153,4 +163,10 @@ html {
 
 .btn-shimmer:active {
   transform: translateY(0);
+}
+
+/* ── Larger text, for members who ask for it ("Aa" in the portal) ──
+   Everything in the portal is sized in rem, so scaling the root scales it all. */
+html[data-text-size="large"] {
+  font-size: 118.75%;
 }

@@ -493,3 +493,11 @@ model AuditLog {
   @@index([onBehalfOfMemberId, createdAt])
   @@index([createdAt])
 }
+
+/// Settings for the leaders' test environment only — e.g. the time machine's
+/// clock offset. Never read unless DEMO_MODE is on (see src/lib/clock.ts).
+model DemoSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}

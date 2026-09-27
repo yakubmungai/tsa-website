@@ -1,72 +1,42 @@
 import { describe, it, expect } from 'vitest';
-import { postTransactionSchema, memberFormSchema, phoneSchema } from './validations';
+import { postLedgerEntrySchema, memberFormSchema, phoneSchema } from './validations';
 
 const MEMBER_ID = '0f2f8b1e-4a1e-4c5b-9f3d-2c7a1b8e5d40';
 
-describe('postTransactionSchema', () => {
-  it('accepts a normal admin entry and converts to exact cents', () => {
-    const result = postTransactionSchema.parse({
-      memberId: MEMBER_ID,
-      amount: '25.00',
-      type: 'MEMBERSHIP',
-      description: 'April dues',
-    });
-    expect(result.amount).toBe(2500);
-  });
+describe('postLedgerEntrySchema', () => {
+  const base = { memberId: MEMBER_ID, account: 'ANNUAL_DUES', direction: 'IN', paidOn: '2026-09-12', memo: '' };
 
-  it('accepts a negative amount, since dues are posted as debits', () => {
-    expect(postTransactionSchema.parse({
-      memberId: MEMBER_ID,
-      amount: '-100',
-      type: 'ADVANCE',
-      description: '',
-    }).amount).toBe(-10_000);
+  it('accepts a normal payment and converts to exact cents', () => {
+    expect(postLedgerEntrySchema.parse({ ...base, amount: '25.00' }).amount).toBe(2500);
   });
 
   it('rejects the inputs that previously reached a Decimal(10,2) column', () => {
-    const bad = ['abc', '', '999999999999', 'NaN', 'Infinity', '1.2.3', '12.345'];
+    const bad = ['abc', '', '999999999999', 'NaN', 'Infinity', '1.2.3', '12.345', '0', '-25'];
     for (const amount of bad) {
-      const result = postTransactionSchema.safeParse({
-        memberId: MEMBER_ID,
-        amount,
-        type: 'ADVANCE',
-        description: '',
-      });
+      const result = postLedgerEntrySchema.safeParse({ ...base, amount });
       expect(result.success, `expected "${amount}" to be rejected`).toBe(false);
     }
   });
 
-  it('rejects an unknown transaction type', () => {
-    expect(
-      postTransactionSchema.safeParse({
-        memberId: MEMBER_ID,
-        amount: '25',
-        type: 'PAYOUT',
-        description: '',
-      }).success
-    ).toBe(false);
+  it('only allows the accounts an officer may post to by hand', () => {
+    expect(postLedgerEntrySchema.safeParse({ ...base, amount: '25', account: 'BENEFIT_PAYOUT' }).success).toBe(false);
+    expect(postLedgerEntrySchema.safeParse({ ...base, amount: '25', account: 'DEATH_LEVY' }).success).toBe(false);
   });
 
-  it('rejects a non-uuid member reference', () => {
+  it('requires a reason for money going out', () => {
+    expect(postLedgerEntrySchema.safeParse({ ...base, amount: '25', direction: 'OUT' }).success).toBe(false);
     expect(
-      postTransactionSchema.safeParse({
-        memberId: 'not-a-uuid',
-        amount: '25',
-        type: 'ADVANCE',
-        description: '',
-      }).success
-    ).toBe(false);
+      postLedgerEntrySchema.safeParse({ ...base, amount: '25', direction: 'OUT', memo: 'Refund on exit' }).success
+    ).toBe(true);
   });
 
-  it('rejects unknown keys rather than passing them to Prisma', () => {
-    const result = postTransactionSchema.safeParse({
-      memberId: MEMBER_ID,
-      amount: '25',
-      type: 'ADVANCE',
-      description: '',
-      role: 'ADMIN', // an attacker appending a field
-    });
-    expect(result.success).toBe(false);
+  it('rejects an impossible date', () => {
+    expect(postLedgerEntrySchema.safeParse({ ...base, amount: '25', paidOn: '2026-02-30' }).success).toBe(false);
+  });
+
+  it('rejects a non-uuid member reference and unknown keys', () => {
+    expect(postLedgerEntrySchema.safeParse({ ...base, amount: '25', memberId: 'x' }).success).toBe(false);
+    expect(postLedgerEntrySchema.safeParse({ ...base, amount: '25', role: 'ADMIN' }).success).toBe(false);
   });
 });
 

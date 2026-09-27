@@ -144,7 +144,7 @@ function addMonths(date: Date, months: number): Date {
  * "Ikiwa ana $0 kwenye akiba tangulizi ila ana $25 ada ya uanachama ..."
  * "Ikiwa hana pesa kwenye account, mwanachama/familia watachangiwa kihiari"
  */
-function tierFor(standingCents: number, advanceCents: number, duesCents: number): StandingTier {
+export function tierFor(standingCents: number, advanceCents: number, duesCents: number): StandingTier {
   if (standingCents >= MIN_STANDING_CENTS) return 'FULL';
   if (advanceCents > 0) return 'REDUCED';
   if (duesCents >= ANNUAL_DUES_CENTS) return 'MINIMAL';
@@ -237,4 +237,23 @@ export function suggestedTopUpCents(standing: MemberStanding): number {
   // Round up to the next whole $25, and never suggest less than $25.
   const quarter = 2_500;
   return Math.max(quarter, Math.ceil(toMinimum / quarter) * quarter);
+}
+
+/**
+ * Tier from the cached balance, for lists of many members.
+ *
+ * The cache records which dues year its dues figure belongs to; after April
+ * rolls over, last year's dues no longer count.
+ */
+export function tierFromCache(
+  cache: { advanceCents: number; duesCents: number; duesYear: number },
+  currentDuesYear: number
+): { tier: StandingTier; standingCents: number; shortfallCents: number } {
+  const dues = cache.duesYear === currentDuesYear ? cache.duesCents : 0;
+  const standingCents = Math.max(0, cache.advanceCents) + Math.max(0, dues);
+  return {
+    tier: tierFor(standingCents, cache.advanceCents, dues),
+    standingCents,
+    shortfallCents: Math.max(0, MIN_STANDING_CENTS - standingCents),
+  };
 }

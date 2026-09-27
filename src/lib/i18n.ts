@@ -1,6 +1,7 @@
 import 'server-only';
 import { cookies, headers } from 'next/headers';
 import { translations, type Language } from './translations';
+import { portalTranslations } from './translations-portal';
 
 /**
  * Server-side language resolution.
@@ -39,4 +40,9 @@ export async function getLocale(): Promise<Language> {
 /** The translation dictionary for this request. */
 export async function getTranslations() {
   return translations[await getLocale()];
+}
+
+/** Strings for the portal, claims, payments and officers' tools. */
+export async function getPortalStrings() {
+  return portalTranslations[await getLocale()];
 }

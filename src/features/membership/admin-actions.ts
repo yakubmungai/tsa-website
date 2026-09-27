@@ -2,83 +2,15 @@
 
 import { z } from 'zod';
 import { db } from '@/lib/db';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import { writeAudit } from '@/lib/audit';
 import { defineAction, actionError } from '@/lib/action';
-import { formatUSD } from '@/lib/money';
-import { memberFormSchema, postTransactionSchema } from '@/lib/validations';
+import { archiveMemberSchema, memberFormSchema, memberIdSchema } from '@/lib/validations';
 import {
   findDuplicateCandidates,
   memberDataFromApplication,
   type DuplicateCandidate,
 } from '@/features/forms/promote';
-
-// Middleware check for admin authentication
-async function verifyAdmin() {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user.role !== 'ADMIN') {
-    throw new Error('Unauthorized. Admin access required.');
-  }
-}
-
-/**
- * Post a ledger entry against a member.
- *
- * The amount arrives from a free-text box, so it is parsed into integer cents
- * and range-checked before it reaches a Decimal(10,2) column. Previously
- * `Number(amount)` was passed straight through, so "abc" became NaN and
- * "999999999999" surfaced as a raw Prisma error in the browser.
- */
-export const postTransaction = defineAction({
-  name: 'postTransaction',
-  guard: 'admin',
-  schema: postTransactionSchema,
-  async handler(input): Promise<{ transactionId: string; memberName: string }> {
-    const member = await db.member.findUnique({
-      where: { id: input.memberId },
-      select: { id: true, names: true, archivedAt: true },
-    });
-    if (!member) actionError('Member not found.');
-    if (member.archivedAt) actionError('Cannot post to an archived member.');
-
-    // The ledger row and its audit entry commit together, so money can never
-    // move without a record of who moved it.
-    const created = await db.$transaction(async (tx) => {
-      const row = await tx.transaction.create({
-        data: {
-          memberId: input.memberId,
-          // Decimal column: hand it an exact decimal string, never a float.
-          amount: (input.amount / 100).toFixed(2),
-          type: input.type,
-          description: input.description || null,
-        },
-        select: { id: true },
-      });
-
-      await writeAudit({
-        tx,
-        action: 'TRANSACTION_POSTED',
-        entityType: 'Transaction',
-        entityId: row.id,
-        onBehalfOfMemberId: input.memberId,
-        summary: `Posted ${formatUSD(input.amount, { sign: 'always' })} (${input.type}) to ${member.names}`,
-        metadata: {
-          amountCents: input.amount,
-          type: input.type,
-          description: input.description,
-        },
-      });
-
-      return row;
-    });
-
-    revalidatePath(`/admin/members/${input.memberId}`);
-    revalidatePath('/portal');
-    return { transactionId: created.id, memberName: member.names };
-  },
-});
 
 /** Update a member's profile and family details. */
 export const updateMemberDetails = defineAction({
@@ -147,91 +79,76 @@ export const updateMemberDetails = defineAction({
  * The caller must confirm by typing the member's exact name, so this cannot be
  * triggered by a stray click on the wrong row.
  */
-export async function archiveMember(memberId: string, confirmName: string) {
-  try {
-    await verifyAdmin();
-
+export const archiveMember = defineAction({
+  name: 'archiveMember',
+  guard: 'admin',
+  schema: archiveMemberSchema,
+  async handler(input): Promise<{ memberId: string }> {
     const member = await db.member.findUnique({
-      where: { id: memberId },
-      include: { _count: { select: { transactions: true, submissions: true } } },
+      where: { id: input.memberId },
+      include: { _count: { select: { ledgerEntries: true, submissions: true } } },
     });
-
-    if (!member) {
-      return { success: false, error: 'Member not found.' };
-    }
-    if (member.archivedAt) {
-      return { success: false, error: 'This member is already archived.' };
-    }
+    if (!member) actionError('Member not found.');
+    if (member.archivedAt) actionError('This member is already archived.');
 
     const normalise = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();
-    if (normalise(confirmName) !== normalise(member.names)) {
-      return {
-        success: false,
-        error: `Name did not match. Type "${member.names}" exactly to archive this member.`,
-      };
+    if (normalise(input.confirmName) !== normalise(member.names)) {
+      actionError(`Name did not match. Type "${member.names}" exactly to archive this member.`);
     }
 
     await db.$transaction(async (tx) => {
-      await tx.member.update({
-        where: { id: memberId },
-        data: { archivedAt: new Date() },
-      });
+      await tx.member.update({ where: { id: member.id }, data: { archivedAt: new Date() } });
 
       // Revoke the login, so an archived member cannot sign in. The member row
-      // and every transaction stay exactly where they are.
-      await tx.user.deleteMany({ where: { memberId } });
+      // and every ledger entry stay exactly where they are.
+      await tx.user.deleteMany({ where: { memberId: member.id } });
 
       await writeAudit({
         tx,
         action: 'MEMBER_ARCHIVED',
         entityType: 'Member',
-        entityId: memberId,
+        entityId: member.id,
         summary: `Archived member ${member.names}`,
         metadata: {
           names: member.names,
           phone: member.phone,
-          transactionCount: member._count.transactions,
+          ledgerEntryCount: member._count.ledgerEntries,
           submissionCount: member._count.submissions,
         },
       });
     });
 
     revalidatePath('/admin/members');
-    revalidatePath(`/admin/members/${memberId}`);
-    return { success: true };
-  } catch (err: any) {
-    console.error('Error archiving member:', err);
-    return { success: false, error: 'Failed to archive member.' };
-  }
-}
+    revalidatePath(`/admin/members/${member.id}`);
+    return { memberId: member.id };
+  },
+});
 
 /** Undo an archive. */
-export async function restoreMember(memberId: string) {
-  try {
-    await verifyAdmin();
-
-    const member = await db.member.findUnique({ where: { id: memberId } });
-    if (!member) return { success: false, error: 'Member not found.' };
+export const restoreMember = defineAction({
+  name: 'restoreMember',
+  guard: 'admin',
+  schema: memberIdSchema,
+  async handler(input): Promise<{ memberId: string }> {
+    const member = await db.member.findUnique({ where: { id: input.memberId } });
+    if (!member) actionError('Member not found.');
 
     await db.$transaction(async (tx) => {
-      await tx.member.update({ where: { id: memberId }, data: { archivedAt: null } });
+      await tx.member.update({ where: { id: member.id }, data: { archivedAt: null } });
       await writeAudit({
         tx,
         action: 'MEMBER_RESTORED',
         entityType: 'Member',
-        entityId: memberId,
+        entityId: member.id,
         summary: `Restored member ${member.names}`,
       });
     });
 
     revalidatePath('/admin/members');
-    revalidatePath(`/admin/members/${memberId}`);
-    return { success: true };
-  } catch (err: any) {
-    console.error('Error restoring member:', err);
-    return { success: false, error: 'Failed to restore member.' };
-  }
-}
+    revalidatePath(`/admin/members/${member.id}`);
+    return { memberId: member.id };
+  },
+});
 
 // Approve a form submission
 /** Members this application might already be, for the reviewer to judge. */

@@ -95,7 +95,7 @@ export function Navbar() {
           {status === "authenticated" ? (
             <>
               <Button asChild variant="outline" className="border-slate-200 text-xs font-semibold">
-                <Link href={session?.user?.role === 'ADMIN' ? '/admin/members' : '/portal'}>Dashboard</Link>
+                <Link href={session?.user?.role === 'ADMIN' ? '/admin' : '/portal'}>Dashboard</Link>
               </Button>
               <Button onClick={() => signOut({ callbackUrl: '/' })} className="bg-slate-900 hover:bg-slate-800 text-white border-0 text-xs font-semibold">
                 Logout
@@ -144,7 +144,7 @@ export function Navbar() {
             {status === "authenticated" ? (
               <>
                 <Button asChild variant="outline" className="mt-2 w-full border-slate-200 text-sm font-semibold justify-start">
-                  <a href={session?.user?.role === 'ADMIN' ? '/admin/members' : '/portal'} onClick={() => setMobileOpen(false)}>
+                  <a href={session?.user?.role === 'ADMIN' ? '/admin' : '/portal'} onClick={() => setMobileOpen(false)}>
                     Dashboard
                   </a>
                 </Button>

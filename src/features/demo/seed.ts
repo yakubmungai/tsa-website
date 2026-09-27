@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { db as defaultDb } from '@/lib/db';
+import { computeStanding, duesYearFor } from '@/lib/finance/balance';
 
 /**
  * Demo data for the leaders' test environment.
@@ -158,45 +159,85 @@ export const DEMO_ACCOUNTS = [
   { email: 'demo.helper@tsa.test', role: 'MEMBER' as const, linkTo: 'Upendo Massawe' },
 ];
 
-function ledgerRows(ledger: Ledger): Prisma.TransactionCreateWithoutMemberInput[] {
-  const rows: Prisma.TransactionCreateWithoutMemberInput[] = [];
-  if (ledger.advance !== 0) {
-    rows.push({
-      amount: ledger.advance.toFixed(2),
-      type: 'ADVANCE',
-      description: 'Akiba tangulizi / Advance deposit',
-    });
-  }
+/** Noon Houston time on a date — the convention for dates with no time of day. */
+function orgNoon(year: number, month: number, day: number): Date {
+  return new Date(Date.UTC(year, month - 1, day, 18));
+}
+
+/**
+ * The demo member's money, as ledger entries.
+ *
+ * Dated relative to when the seed runs, so the demo never goes stale: dues are
+ * always for the current April cycle, and deposits predate them.
+ */
+function ledgerRows(
+  memberId: string,
+  ledger: Ledger,
+  asOf: Date
+): Prisma.LedgerEntryCreateManyInput[] {
+  const cycle = duesYearFor(asOf);
+  const joined = orgNoon(cycle - 2, 5, 1);
+  const duesPaid = orgNoon(cycle, 4, 15);
+  const rows: Prisma.LedgerEntryCreateManyInput[] = [];
   if (ledger.registration !== 0) {
     rows.push({
-      amount: ledger.registration.toFixed(2),
-      type: 'REGISTRATION',
-      description: 'Kiingilio / Entry fee',
+      memberId,
+      account: 'ENTRY_FEE',
+      entryKind: 'PAYMENT',
+      amountCents: Math.round(ledger.registration * 100),
+      description: 'Entry fee',
+      descriptionSw: 'Kiingilio',
+      occurredAt: joined,
+    });
+  }
+  if (ledger.advance !== 0) {
+    rows.push({
+      memberId,
+      account: 'ADVANCE_DEPOSIT',
+      entryKind: ledger.advance > 0 ? 'PAYMENT' : 'ADJUSTMENT',
+      amountCents: Math.round(ledger.advance * 100),
+      description: ledger.advance > 0 ? 'Advance deposit' : 'Advance overdrawn by earlier cases',
+      descriptionSw: ledger.advance > 0 ? 'Akiba tangulizi' : 'Akiba imepungua kwa michango ya awali',
+      occurredAt: joined,
     });
   }
   if (ledger.membership !== 0) {
     rows.push({
-      amount: ledger.membership.toFixed(2),
-      type: 'MEMBERSHIP',
-      description: 'Ada ya mwaka 2026 / Annual dues 2026',
+      memberId,
+      account: 'ANNUAL_DUES',
+      entryKind: 'PAYMENT',
+      amountCents: Math.round(ledger.membership * 100),
+      description: `Annual dues ${cycle}/${String(cycle + 1).slice(2)}`,
+      descriptionSw: `Ada ya mwaka ${cycle}/${String(cycle + 1).slice(2)}`,
+      occurredAt: duesPaid,
     });
   }
   return rows;
 }
 
-/** Remove everything. Ordered so Transaction's RESTRICT on Member is respected. */
+/**
+ * Remove everything. Ordered so the RESTRICT foreign keys on Member (the
+ * ledger, and the legacy Transaction table) are cleared before members are.
+ */
 export async function clearAllData(client: PrismaClient = defaultDb as PrismaClient) {
   await client.auditLog.deleteMany({});
+  await client.ledgerEntry.updateMany({ data: { reversesId: null } });
+  await client.ledgerEntry.deleteMany({});
+  await client.memberBalance.deleteMany({});
   await client.transaction.deleteMany({});
   await client.formSubmission.deleteMany({});
+  await client.actingSession.deleteMany({});
+  await client.delegation.deleteMany({});
+  await client.authTicket.deleteMany({});
   await client.user.deleteMany({});
   await client.verificationToken.deleteMany({});
   await client.member.deleteMany({});
+  await client.demoSetting.deleteMany({});
 }
 
 export interface SeedResult {
   members: number;
-  transactions: number;
+  ledgerEntries: number;
   accounts: number;
 }
 
@@ -211,8 +252,11 @@ export async function seedDemoData(
 ): Promise<SeedResult> {
   const byName = new Map<string, string>();
   const phoneByName = new Map<string, string>();
+  const asOf = new Date();
+  let memberNumber = 100;
 
   for (const m of DEMO_MEMBERS) {
+    memberNumber += 1;
     const created = await client.member.create({
       data: {
         names: m.names,
@@ -227,10 +271,16 @@ export async function seedDemoData(
         siblings: m.siblings ?? [],
         witnesses: (m.witnesses ?? []) as Prisma.InputJsonValue[],
         nextOfKin: (m.nextOfKin ?? []) as Prisma.InputJsonValue[],
-        transactions: { create: ledgerRows(m.ledger) },
+        memberNumber,
+        joinedAt: orgNoon(duesYearFor(asOf) - 2, 5, 1),
+        joinedAtEstimated: false,
+        status: 'ACTIVE',
       },
       select: { id: true },
     });
+    const rows = ledgerRows(created.id, m.ledger, asOf);
+    if (rows.length > 0) await client.ledgerEntry.createMany({ data: rows });
+    await writeBalance(client, created.id, asOf);
     byName.set(m.names, created.id);
     phoneByName.set(m.names, m.phone);
     log(`  ${m.names.padEnd(24)} ${m.note}`);
@@ -254,10 +304,43 @@ export async function seedDemoData(
     log(`  ${account.email.padEnd(24)} ${account.role}${account.linkTo ? ` -> ${account.linkTo}` : ''}`);
   }
 
-  const transactions = await client.transaction.count();
+  const ledgerEntries = await client.ledgerEntry.count();
   return {
     members: DEMO_MEMBERS.length,
-    transactions,
+    ledgerEntries,
     accounts: DEMO_ACCOUNTS.length,
   };
+}
+
+/** The cached balance, computed the same way the ledger service does. */
+async function writeBalance(client: PrismaClient, memberId: string, asOf: Date) {
+  const entries = await client.ledgerEntry.findMany({
+    where: { memberId },
+    select: { account: true, amountCents: true, occurredAt: true, voidedAt: true },
+  });
+  const s = computeStanding({ entries, joinedAt: null, asOf });
+  const levy = entries
+    .filter((e) => e.voidedAt === null && (e.account === 'HARDSHIP_LEVY' || e.account === 'DEATH_LEVY'))
+    .reduce((t, e) => t + e.amountCents, 0);
+  await client.memberBalance.upsert({
+    where: { memberId },
+    create: {
+      memberId,
+      netCents: s.netCents,
+      advanceCents: s.advanceCents,
+      entryFeeCents: s.entryFeeCents,
+      duesCents: s.duesCents,
+      duesYear: s.duesYear,
+      outstandingCents: Math.max(0, -levy),
+    },
+    update: {
+      netCents: s.netCents,
+      advanceCents: s.advanceCents,
+      entryFeeCents: s.entryFeeCents,
+      duesCents: s.duesCents,
+      duesYear: s.duesYear,
+      outstandingCents: Math.max(0, -levy),
+      recomputedAt: new Date(),
+    },
+  });
 }

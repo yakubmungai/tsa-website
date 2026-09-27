@@ -20,7 +20,7 @@ export const resetDemoData = defineAction({
   name: 'resetDemoData',
   guard: 'admin',
   schema: z.object({ confirm: z.literal('RESET') }).strict(),
-  async handler(): Promise<{ members: number; transactions: number }> {
+  async handler(): Promise<{ members: number; ledgerEntries: number }> {
     if (!isDemoMode()) {
       actionError('Demo reset is only available in the test environment.');
     }
@@ -30,6 +30,7 @@ export const resetDemoData = defineAction({
 
     revalidatePath('/admin/members');
     revalidatePath('/portal');
-    return { members: result.members, transactions: result.transactions };
+    revalidatePath('/admin');
+    return { members: result.members, ledgerEntries: result.ledgerEntries };
   },
 });

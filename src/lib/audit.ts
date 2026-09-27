@@ -26,6 +26,8 @@ export type AuditAction =
   | 'MEMBER_DELETED'
   // money
   | 'TRANSACTION_POSTED'
+  | 'LEDGER_ENTRY_POSTED'
+  | 'LEDGER_ENTRY_REVERSED'
   // submissions
   | 'SUBMISSION_APPROVED'
   | 'SUBMISSION_REJECTED'

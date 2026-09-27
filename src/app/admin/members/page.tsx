@@ -1,37 +1,35 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { AlertTriangle, HandCoins, Users, Wallet } from 'lucide-react';
 import { db } from '@/lib/db';
-import { redirect } from 'next/navigation';
-import { Navbar } from '@/components/navbar';
-import { Footer } from '@/components/footer';
-import { AdminMembersList } from '@/components/admin-members-list';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { Users, FileSpreadsheet, Hourglass, ShieldAlert, FlaskConical, MessageCircle } from 'lucide-react';
-import Link from 'next/link';
-import { isDemoMode } from '@/lib/demo';
+import { requireAdmin } from '@/lib/session';
+import { getPortalStrings } from '@/lib/i18n';
+import { now } from '@/lib/clock';
+import { duesYearFor, tierFromCache } from '@/lib/finance/balance';
+import { AdminShell } from '@/components/admin/admin-shell';
+import { AdminMembersList, type DirectoryMember } from '@/components/admin-members-list';
+import { PageHeader } from '@/components/portal/page-header';
+import { StatCard } from '@/components/portal/stat-card';
+import { MoneyAmount } from '@/components/portal/money';
 
 export default async function AdminMembersPage() {
-  const session = await getServerSession(authOptions);
+  await requireAdmin();
+  const [t, asOf] = await Promise.all([getPortalStrings(), now()]);
+  const currentDuesYear = duesYearFor(asOf);
 
-  if (!session || session.user.role !== 'ADMIN') {
-    redirect('/login');
-  }
-
-  // Fetch all members with transactions
-  const membersRaw = await db.member.findMany({
+  // One row per member from the cached balance — never every ledger entry for
+  // every member, which is what made this page slow as the levies grow.
+  const rows = await db.member.findMany({
     where: { archivedAt: null },
-    include: {
-      transactions: true,
-    },
+    include: { balance: true },
     orderBy: { names: 'asc' },
   });
 
-  // Calculate stats
-  const members = membersRaw.map(m => {
-    const balance = m.transactions.reduce((sum, t) => sum + Number(t.amount), 0);
+  const members: DirectoryMember[] = rows.map((m) => {
+    const cache = m.balance ?? { advanceCents: 0, duesCents: 0, duesYear: currentDuesYear, netCents: 0, outstandingCents: 0 };
+    const { tier } = tierFromCache(cache, currentDuesYear);
     return {
       id: m.id,
       names: m.names,
+      memberNumber: m.memberNumber,
       phone: m.phone,
       address: m.address,
       husbandWife: m.husbandWife,
@@ -41,110 +39,55 @@ export default async function AdminMembersPage() {
       siblings: m.siblings,
       witnesses: m.witnesses,
       nextOfKin: m.nextOfKin,
-      balance,
+      advanceCents: cache.advanceCents,
+      outstandingCents: cache.outstandingCents,
+      netCents: cache.netCents,
+      tier,
     };
   });
 
-  const totalMembersCount = members.length;
-  const membersWithDebt = members.filter(m => m.balance < 0);
-  const totalDebt = membersWithDebt.reduce((sum, m) => sum + Math.abs(m.balance), 0);
-  const totalCredit = members.filter(m => m.balance > 0).reduce((sum, m) => sum + m.balance, 0);
-
-  // Fetch pending submissions
-  const pendingSubmissionsCount = await db.formSubmission.count({
-    where: { status: 'PENDING' }
-  });
+  const advanceHeld = members.reduce((s, m) => s + Math.max(0, m.advanceCents), 0);
+  const owing = members.filter((m) => m.outstandingCents > 0);
+  const outstanding = owing.reduce((s, m) => s + m.outstandingCents, 0);
+  const below = members.filter((m) => m.tier !== 'FULL').length;
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50">
-      <Navbar />
+    <AdminShell active="members">
+      <PageHeader title={t.admin.members.title} subtitle={t.admin.members.subtitle} />
 
-      <main className="flex-grow max-w-7xl w-full mx-auto pt-28 pb-10 px-4 sm:px-6 lg:px-8 space-y-8">
-        {/* Navigation & Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Admin Control Center</h1>
-            <p className="text-slate-500 text-sm">Tanzania Sharing Association • Central Management Portal</p>
-          </div>
-          <div className="flex gap-2">
-            {isDemoMode() && (
-              <Link
-                href="/admin/demo"
-                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-amber-950 rounded-lg text-sm font-semibold transition flex items-center gap-2"
-              >
-                <FlaskConical className="h-4 w-4" />
-                Mwongozo wa Majaribio
-              </Link>
-            )}
-            <Link
-              href="/admin/broadcast"
-              className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-sm font-semibold transition flex items-center gap-2"
-            >
-              <MessageCircle className="h-4 w-4" />
-              Matangazo
-            </Link>
-            <Link
-              href="/admin/forms"
-              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm font-semibold transition flex items-center gap-2"
-            >
-              <Hourglass className="h-4 w-4" />
-              Forms Queue ({pendingSubmissionsCount})
-            </Link>
-          </div>
+      <div className="space-y-8">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            label={t.admin.members.total}
+            value={members.length}
+            help={t.admin.members.totalHelp}
+            icon={<Users className="h-5 w-5" aria-hidden />}
+          />
+          <StatCard
+            label={t.admin.members.advanceHeld}
+            value={<MoneyAmount cents={advanceHeld} />}
+            help={t.admin.members.advanceHeldHelp}
+            icon={<Wallet className="h-5 w-5" aria-hidden />}
+            tone="success"
+          />
+          <StatCard
+            label={t.admin.members.outstanding}
+            value={<MoneyAmount cents={outstanding} />}
+            help={t.admin.members.outstandingHelp(owing.length)}
+            icon={<HandCoins className="h-5 w-5" aria-hidden />}
+            tone={outstanding > 0 ? 'warning' : 'neutral'}
+          />
+          <StatCard
+            label={t.admin.members.belowMinimum}
+            value={below}
+            help={t.admin.members.belowMinimumHelp}
+            icon={<AlertTriangle className="h-5 w-5" aria-hidden />}
+            tone={below > 0 ? 'danger' : 'neutral'}
+          />
         </div>
 
-        {/* Admin Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="shadow bg-white border border-slate-100">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 font-mono">Total Members</span>
-              <Users className="h-5 w-5 text-emerald-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-slate-800">{totalMembersCount}</div>
-              <p className="text-xs text-slate-400 mt-1">Imported & approved profiles</p>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow bg-white border border-slate-100">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 font-mono">Outstanding Dues</span>
-              <ShieldAlert className="h-5 w-5 text-rose-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-rose-700">${totalDebt.toFixed(2)}</div>
-              <p className="text-xs text-slate-400 mt-1">Total owed by {membersWithDebt.length} members</p>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow bg-white border border-slate-100">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 font-mono">Pre-Paid Advance Credits</span>
-              <FileSpreadsheet className="h-5 w-5 text-emerald-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-emerald-700">${totalCredit.toFixed(2)}</div>
-              <p className="text-xs text-slate-400 mt-1">Excess funds held in accounts</p>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow bg-white border border-slate-100">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 font-mono">Form Applications</span>
-              <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-slate-800">{pendingSubmissionsCount}</div>
-              <p className="text-xs text-slate-400 mt-1">Pending approval reviews</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Interactive Directory List */}
-        <AdminMembersList initialMembers={members} />
-      </main>
-
-      <Footer />
-    </div>
+        <AdminMembersList members={members} />
+      </div>
+    </AdminShell>
   );
 }

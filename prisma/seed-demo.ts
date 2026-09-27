@@ -46,9 +46,9 @@ async function main() {
     console.log(`\nTarget database: ${new URL(process.env.DATABASE_URL!).hostname}`);
 
     const existingMembers = await db.member.count();
-    const existingTransactions = await db.transaction.count();
+    const existingEntries = await db.ledgerEntry.count();
     console.log(
-      `Clearing existing data (${existingMembers} members, ${existingTransactions} transactions)...\n`
+      `Clearing existing data (${existingMembers} members, ${existingEntries} ledger entries)...\n`
     );
     await clearAllData(db);
 
@@ -56,7 +56,7 @@ async function main() {
     const result = await seedDemoData(db, (line) => console.log(line));
 
     console.log(
-      `\nDone. ${result.members} members, ${result.transactions} ledger entries, ` +
+      `\nDone. ${result.members} members, ${result.ledgerEntries} ledger entries, ` +
         `${result.accounts} sign-in accounts.`
     );
     console.log('Sign in at /login using the demo buttons.\n');

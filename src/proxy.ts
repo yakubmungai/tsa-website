@@ -1,8 +1,13 @@
+/**
+ * Route guard. Named proxy.ts since Next.js 16, which deprecated middleware.ts;
+ * the default export still works. Pages and actions check again themselves —
+ * this is the first gate, not the only one.
+ */
 import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
 
 export default withAuth(
-  function middleware(req) {
+  function proxy(req) {
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
 

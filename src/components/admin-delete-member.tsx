@@ -37,14 +37,14 @@ export function AdminDeleteMember({ memberId, memberNames }: ArchiveMemberProps)
   const handleArchive = async () => {
     setLoading(true);
     try {
-      const res = await archiveMember(memberId, confirmName);
+      const res = await archiveMember({ memberId, confirmName });
       if (res.success) {
         toast.success(`${memberNames} has been archived.`);
         setOpen(false);
         router.push('/admin/members');
         router.refresh();
       } else {
-        toast.error(res.error || 'Failed to archive member.');
+        toast.error(res.error);
       }
     } catch {
       toast.error('An error occurred while archiving.');

@@ -1,12 +1,13 @@
 import { z } from 'zod';
 import { parseUSDToCents, MoneyError } from './money';
 import { toE164 } from './phone';
+import { isIsoDate } from './finance/dates';
 
 /**
  * Input schemas for server actions.
  *
  * Every server action must validate through one of these. Before this, actions
- * such as createMember(data: any) and postTransaction() spread client-supplied
+ * such as createMember(data: any) and the old postTransaction() spread client-supplied
  * objects straight into Prisma, so an unknown key, a NaN amount or a string
  * where an array belonged all reached the database.
  *
@@ -69,17 +70,6 @@ export const centsFromInput = z
   })
   .transform((value) => parseUSDToCents(value));
 
-export const TRANSACTION_TYPES = ['ADVANCE', 'REGISTRATION', 'MEMBERSHIP', 'OTHER'] as const;
-
-export const postTransactionSchema = z
-  .object({
-    memberId: z.string().uuid('Invalid member reference'),
-    amount: centsFromInput,
-    type: z.enum(TRANSACTION_TYPES),
-    description: z.string().trim().max(500).default(''),
-  })
-  .strict();
-
 export const archiveMemberSchema = z
   .object({
     memberId: z.string().uuid('Invalid member reference'),
@@ -122,3 +112,37 @@ export const otpCodeSchema = z
   .string()
   .trim()
   .regex(/^\d{6}$/, 'Enter the 6-digit code');
+
+/** A calendar date from a date input, "YYYY-MM-DD", read as a Houston date. */
+export const isoDateInput = z
+  .string()
+  .trim()
+  .refine((v) => isIsoDate(v), 'Choose a valid date');
+
+/** The accounts an officer may post to by hand. Levies are posted by the case workflow. */
+export const MANUAL_ACCOUNTS = ['ADVANCE_DEPOSIT', 'ENTRY_FEE', 'ANNUAL_DUES', 'ADJUSTMENT'] as const;
+
+export const postLedgerEntrySchema = z
+  .object({
+    memberId: z.string().uuid('Invalid member reference'),
+    account: z.enum(MANUAL_ACCOUNTS),
+    /** IN is money received; OUT is money paid back or a charge. */
+    direction: z.enum(['IN', 'OUT']),
+    amount: centsFromInput.refine((c) => c > 0, 'Enter an amount greater than zero'),
+    paidOn: isoDateInput,
+    memo: z.string().trim().max(300).default(''),
+  })
+  .strict()
+  .superRefine((v, ctx) => {
+    // Money leaving a member's account always needs a reason on record.
+    if (v.direction === 'OUT' && v.memo.length < 3) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['memo'], message: 'Say why' });
+    }
+  });
+
+export const reverseLedgerEntrySchema = z
+  .object({
+    entryId: z.string().uuid('Invalid entry reference'),
+    reason: z.string().trim().min(3, 'Give a short reason').max(300),
+  })
+  .strict();

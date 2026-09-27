@@ -29,7 +29,7 @@ export function DemoReset() {
       const res = await resetDemoData({ confirm: 'RESET' });
       if (res.success) {
         toast.success(
-          `Demo data reset: ${res.data.members} members, ${res.data.transactions} ledger entries.`
+          `Demo data reset: ${res.data.members} members, ${res.data.ledgerEntries} ledger entries.`
         );
         setOpen(false);
         router.refresh();

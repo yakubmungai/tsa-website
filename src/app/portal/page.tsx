@@ -1,39 +1,37 @@
-import { getEffectiveContext } from '@/lib/session';
-import { db } from '@/lib/db';
-import { AccountSwitcher } from '@/components/account-switcher';
-import { getTranslations } from '@/lib/i18n';
-import { showComplianceStatus } from '@/lib/rollout';
-import { redirect } from 'next/navigation';
-import { Navbar } from '@/components/navbar';
-import { Footer } from '@/components/footer';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { 
-  DollarSign, 
-  User, 
-  History, 
-  ArrowUpRight, 
-  ArrowDownRight, 
-  FileText, 
-  ChevronRight, 
-  CheckCircle2, 
-  Clock 
-} from 'lucide-react';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { CalendarCheck, EyeOff, FileText, HandHeart, History, Shield, User, Users, Wallet } from 'lucide-react';
+import { db } from '@/lib/db';
+import { getEffectiveContext, checkPermission } from '@/lib/session';
+import { getLocale, getPortalStrings } from '@/lib/i18n';
+import { showComplianceStatus } from '@/lib/rollout';
+import { getMemberStanding } from '@/lib/finance/ledger';
+import { heroStateFor } from '@/lib/finance/hero';
+import { suggestedTopUpCents } from '@/lib/finance/balance';
+import { formatUSD } from '@/lib/money';
+import { AccountSwitcher } from '@/components/account-switcher';
+import { PageShell } from '@/components/portal/page-shell';
+import { PageHeader } from '@/components/portal/page-header';
+import { StatusHero } from '@/components/portal/status-hero';
+import { StatCard } from '@/components/portal/stat-card';
+import { SectionCard } from '@/components/portal/section-card';
+import { StatusBadge } from '@/components/portal/status-badge';
+import { MoneyAmount } from '@/components/portal/money';
+import { LedgerHistory } from '@/components/portal/ledger-history';
+import { ChoiceLink } from '@/components/portal/choice-button';
+import { EmptyState } from '@/components/portal/empty-state';
+import { TextSizeToggle } from '@/components/portal/text-size-toggle';
+import { HelpButton } from '@/components/portal/help-button';
 
 export default async function PortalPage() {
   const ctx = await getEffectiveContext();
-  const t = await getTranslations();
+  if (!ctx) redirect('/login');
+
+  // Pure admins have no member profile of their own.
+  if (ctx.actor.role === 'ADMIN' && !ctx.memberId) redirect('/admin');
+
+  const [t, locale] = await Promise.all([getPortalStrings(), getLocale()]);
   const showStatus = showComplianceStatus();
-
-  if (!ctx) {
-    redirect('/login');
-  }
-
-  // Pure admins don't have member profiles
-  if (ctx.actor.role === 'ADMIN' && !ctx.memberId) {
-    redirect('/admin/members');
-  }
 
   // Accounts this user can act for, so a helper can switch between them.
   const switchable = ctx.isActing
@@ -50,338 +48,231 @@ export default async function PortalPage() {
         names: d.ownerMember.names,
       }));
 
-  // The effective member — the user's own, or the one they are helping.
   const memberId = ctx.memberId;
   if (!memberId) {
     return (
-      <div className="flex flex-col min-h-screen bg-slate-50">
-        <Navbar />
-        <main className="flex-grow flex items-center justify-center p-8">
-          <Card className="w-full max-w-md border-t-4 border-t-amber-500 bg-white shadow-lg text-center p-6">
-            <CardHeader>
-              <CardTitle>{t.portal.accountPending.title}</CardTitle>
-              <CardDescription>
-                {t.portal.accountPending.body}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-slate-600 text-sm mb-4">
-                {t.portal.accountPending.contact}
-              </p>
-              <Link href="/" className="text-emerald-600 font-semibold hover:underline">
-                Return to Homepage
+      <PageShell width="narrow">
+        <SectionCard>
+          <EmptyState
+            icon={<User className="h-6 w-6" />}
+            title={t.dashboard.accountPendingTitle}
+            body={t.dashboard.accountPendingBody}
+            action={
+              <Link href="/" className="text-base font-semibold text-primary hover:underline">
+                {t.dashboard.goHome}
               </Link>
-            </CardContent>
-          </Card>
-        </main>
-        <Footer />
-      </div>
+            }
+          />
+        </SectionCard>
+      </PageShell>
     );
   }
 
-  // Fetch Member Details
   const member = await db.member.findUnique({
     where: { id: memberId },
-    include: {
-      transactions: {
-        orderBy: { date: 'desc' }
-      },
-      submissions: {
-        orderBy: { createdAt: 'desc' },
-        take: 5
-      }
-    }
+    select: { id: true, names: true, phone: true, address: true, husbandWife: true },
   });
+  if (!member) redirect('/login');
 
-  if (!member) {
-    return (
-      <div className="flex flex-col min-h-screen bg-slate-50">
-        <Navbar />
-        <main className="flex-grow flex items-center justify-center p-8">
-          <Card className="w-full max-w-md border-t-4 border-t-red-500 bg-white shadow-lg text-center p-6">
-            <CardHeader>
-              <CardTitle>{t.portal.notFound.title}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-slate-600 text-sm mb-4">
-                {t.portal.notFound.body}
-              </p>
-            </CardContent>
-          </Card>
-        </main>
-        <Footer />
+  // A helper sees money only if the member agreed to it.
+  const canSeeFinances = checkPermission(ctx, 'VIEW_FINANCES');
+  const canSubmit = checkPermission(ctx, 'SUBMIT_FORMS');
+  const firstName = member.names.split(' ')[0];
+
+  const header = (
+    <PageHeader
+      eyebrow={t.dashboard.subtitle}
+      title={t.dashboard.greeting(ctx.isActing ? member.names : firstName)}
+      subtitle={ctx.isActing ? t.dashboard.actingFor(member.names) : undefined}
+      actions={
+        <>
+          <TextSizeToggle />
+          <HelpButton />
+        </>
+      }
+    />
+  );
+
+  const quickLinks = (
+    <SectionCard title={t.dashboard.quickLinks}>
+      <div className="grid gap-3">
+        {canSubmit ? (
+          <ChoiceLink
+            href="/portal/forms"
+            icon={<HandHeart className="h-6 w-6" />}
+            title={t.dashboard.fileClaim}
+          />
+        ) : null}
+        {!ctx.isActing ? (
+          <ChoiceLink href="/portal/access" icon={<Users className="h-6 w-6" />} title={t.dashboard.helpers} />
+        ) : null}
+        <ChoiceLink href="/portal/forms" icon={<FileText className="h-6 w-6" />} title={t.dashboard.forms} />
       </div>
+    </SectionCard>
+  );
+
+  if (!canSeeFinances) {
+    return (
+      <PageShell>
+        {header}
+        <div className="space-y-6">
+          <SectionCard>
+            <EmptyState icon={<EyeOff className="h-6 w-6" />} title={t.dashboard.hiddenFinances} />
+          </SectionCard>
+          {quickLinks}
+        </div>
+      </PageShell>
     );
   }
 
-  // Calculate Balances
-  const transactions = member.transactions;
-  const advanceTotal = transactions
-    .filter(t => t.type === 'ADVANCE')
-    .reduce((sum, t) => sum + Number(t.amount), 0);
+  const [standing, entries] = await Promise.all([
+    getMemberStanding(memberId),
+    db.ledgerEntry.findMany({
+      where: { memberId },
+      orderBy: [{ occurredAt: 'desc' }, { postedAt: 'desc' }],
+      take: 100,
+      select: {
+        id: true,
+        account: true,
+        entryKind: true,
+        amountCents: true,
+        description: true,
+        descriptionSw: true,
+        occurredAt: true,
+        voidedAt: true,
+      },
+    }),
+  ]);
 
-  const registrationTotal = transactions
-    .filter(t => t.type === 'REGISTRATION')
-    .reduce((sum, t) => sum + Number(t.amount), 0);
+  const state = heroStateFor({
+    outstandingCents: standing.outstandingCents,
+    shortfallCents: standing.shortfallCents,
+    showCompliance: showStatus,
+  });
+  const topUp = suggestedTopUpCents(standing);
+  const dateFmt = new Intl.DateTimeFormat(locale === 'sw' ? 'sw-TZ' : 'en-US', {
+    dateStyle: 'long',
+    timeZone: 'America/Chicago',
+  });
 
-  const membershipTotal = transactions
-    .filter(t => t.type === 'MEMBERSHIP')
-    .reduce((sum, t) => sum + Number(t.amount), 0);
+  const hero = {
+    ok: { headline: t.status.ok, body: t.status.okBody },
+    owe: {
+      headline: t.status.owe(formatUSD(standing.outstandingCents)),
+      body: t.status.oweBody,
+      action: { href: '/portal', label: t.status.payNow },
+    },
+    low: {
+      headline: t.status.low,
+      body: t.status.lowBody(formatUSD(topUp || standing.shortfallCents)),
+      action: { href: '/portal', label: t.status.topUp },
+    },
+    neutral: { headline: t.status.neutral, body: t.status.neutralBody },
+  }[state];
 
-  const netBalance = transactions.reduce((sum, t) => sum + Number(t.amount), 0);
+  const duesYearLabel = `${standing.duesYear}/${String(standing.duesYear + 1).slice(2)}`;
+  const paidBadge = (settled: boolean) =>
+    showStatus ? (
+      settled ? (
+        <StatusBadge tone="success">{t.dashboard.paid}</StatusBadge>
+      ) : (
+        <StatusBadge tone="danger">{t.dashboard.notPaid}</StatusBadge>
+      )
+    ) : null;
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50">
-      <Navbar />
+    <PageShell>
+      {header}
 
-      <main className="flex-grow max-w-7xl w-full mx-auto pt-28 pb-10 px-4 sm:px-6 lg:px-8 space-y-8">
-        {/* Welcome Banner */}
-        <div className="bg-gradient-to-r from-emerald-800 to-emerald-950 text-white rounded-2xl p-6 sm:p-8 shadow-md">
-          <h1 className="text-2xl sm:text-3xl font-bold">
-            {t.portal.welcome}, {member.names}
-          </h1>
-          <p className="text-emerald-100/90 text-base mt-1">{t.portal.subtitle}</p>
-          {ctx.isActing ? (
-            <p className="mt-2 text-base font-semibold text-amber-200">{t.portal.actingFor}</p>
-          ) : null}
+      <div className="space-y-8">
+        <StatusHero state={state} {...hero} />
+
+        {standing.isWithinNewMemberWait && standing.eligibleFrom ? (
+          <SectionCard>
+            <p className="flex items-start gap-3 text-lg">
+              <CalendarCheck className="mt-1 h-6 w-6 shrink-0 text-primary" aria-hidden />
+              {t.dashboard.newMemberWait(dateFmt.format(standing.eligibleFrom))}
+            </p>
+          </SectionCard>
+        ) : null}
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <StatCard
+            label={t.dashboard.advance}
+            value={<MoneyAmount cents={standing.advanceCents} />}
+            help={t.dashboard.advanceHelp}
+            icon={<Wallet className="h-5 w-5" aria-hidden />}
+          />
+          <StatCard
+            label={t.dashboard.dues}
+            value={<MoneyAmount cents={standing.duesCents} />}
+            help={t.dashboard.duesHelp(duesYearLabel)}
+            icon={<CalendarCheck className="h-5 w-5" aria-hidden />}
+            badge={paidBadge(standing.duesSettled)}
+          />
+          <StatCard
+            label={t.dashboard.entryFee}
+            value={<MoneyAmount cents={standing.entryFeeCents} />}
+            help={t.dashboard.entryFeeHelp}
+            icon={<Shield className="h-5 w-5" aria-hidden />}
+            badge={paidBadge(standing.entryFeeSettled)}
+          />
         </div>
 
-        {/* Balance Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="shadow bg-white border border-slate-100">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <span className="text-sm font-semibold text-slate-600">{t.portal.balance.net}</span>
-              <DollarSign className={`h-5 w-5 ${netBalance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`} />
-            </CardHeader>
-            <CardContent>
-              {/* Sign and word, never colour alone. */}
-              <div className={`text-2xl font-bold ${netBalance >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                {netBalance >= 0 ? '+' : '−'}${Math.abs(netBalance).toFixed(2)}
-                <span className="ml-2 text-base font-semibold">
-                  {netBalance >= 0 ? t.portal.balance.credit : t.portal.balance.owing}
-                </span>
-              </div>
-              <p className="text-sm text-slate-600 mt-1">{t.portal.balance.netHelp}</p>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow bg-white border border-slate-100">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <span className="text-sm font-semibold text-slate-600">{t.portal.balance.advance}</span>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-slate-800">${advanceTotal.toFixed(2)}</div>
-              <p className="text-sm text-slate-600 mt-1">{t.portal.balance.advanceHelp}</p>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow bg-white border border-slate-100">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <span className="text-sm font-semibold text-slate-600">{t.portal.balance.registration}</span>
-              {/* Compliance status is withheld until the roster is confirmed —
-                  the imported figures do not yet reconcile. */}
-              {showStatus ? (
-                registrationTotal > 0 ? (
-                  <Badge className="bg-emerald-100 text-emerald-800 border-none font-semibold">
-                    {t.portal.balance.paid}
-                  </Badge>
+        <div className="grid gap-8 lg:grid-cols-3">
+          <div className="space-y-8 lg:col-span-2">
+            {showStatus ? (
+              <SectionCard title={t.dashboard.benefitsTitle} icon={<HandHeart className="h-5 w-5 text-primary" />}>
+                {standing.tier === 'VOLUNTARY' ? (
+                  <p className="text-lg">{t.dashboard.benefitsVoluntary}</p>
                 ) : (
-                  <Badge className="bg-rose-100 text-rose-800 border-none font-semibold">
-                    {t.portal.balance.unpaid}
-                  </Badge>
-                )
-              ) : null}
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-slate-800">${registrationTotal.toFixed(2)}</div>
-              <p className="text-sm text-slate-600 mt-1">{t.portal.balance.registrationHelp}</p>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow bg-white border border-slate-100">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <span className="text-sm font-semibold text-slate-600">{t.portal.balance.membership}</span>
-              {showStatus ? (
-                membershipTotal > 0 ? (
-                  <Badge className="bg-emerald-100 text-emerald-800 border-none font-semibold">
-                    {t.portal.balance.paid}
-                  </Badge>
-                ) : (
-                  <Badge className="bg-rose-100 text-rose-800 border-none font-semibold">
-                    {t.portal.balance.unpaid}
-                  </Badge>
-                )
-              ) : null}
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-slate-800">${membershipTotal.toFixed(2)}</div>
-              <p className="text-sm text-slate-600 mt-1">{t.portal.balance.membershipHelp}</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Dashboard Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Column - Financial Ledger */}
-          <div className="lg:col-span-2 space-y-6">
-            <Card className="shadow-md bg-white border border-slate-100">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg font-bold text-slate-900">{t.portal.transactions.title}</CardTitle>
-                  <CardDescription>Financial record history and ledger updates</CardDescription>
-                </div>
-                <History className="h-5 w-5 text-slate-400" />
-              </CardHeader>
-              <CardContent>
-                {transactions.length === 0 ? (
-                  <div className="text-center py-8 text-slate-400 text-sm">
-                    No transactions recorded on this profile yet.
-                  </div>
-                ) : (
-                  <div className="divide-y divide-slate-100">
-                    {transactions.map((t) => (
-                      <div key={t.id} className="py-4 flex justify-between items-center first:pt-0 last:pb-0">
-                        <div className="space-y-1">
-                          <p className="text-sm font-semibold text-slate-800">{t.description || `${t.type} Entry`}</p>
-                          <div className="flex gap-2 items-center">
-                            <span className="text-xs text-slate-400">
-                              {new Date(t.date).toLocaleDateString(undefined, { dateStyle: 'medium' })}
-                            </span>
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 uppercase">
-                              {t.type}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className={`text-sm font-bold flex items-center ${Number(t.amount) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                          {Number(t.amount) >= 0 ? (
-                            <ArrowUpRight className="h-4 w-4 mr-0.5" />
-                          ) : (
-                            <ArrowDownRight className="h-4 w-4 mr-0.5" />
-                          )}
-                          ${Math.abs(Number(t.amount)).toFixed(2)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Side Column - Profile & Form Quick Access */}
-          <div className="space-y-6">
-            {switchable.length > 0 ? <AccountSwitcher accounts={switchable} /> : null}
-
-            {/* Quick Actions */}
-            <Card className="shadow-md bg-white border border-slate-100">
-              <CardHeader>
-                <CardTitle className="text-lg font-bold text-slate-900">{t.portal.actions.title}</CardTitle>
-                <CardDescription>{t.portal.actions.description}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Link href="/portal/forms" className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 text-slate-700 transition">
-                  <span className="flex items-center text-sm font-semibold gap-2">
-                    <FileText className="h-4 w-4 text-emerald-600" />
-                    {t.portal.actions.forms}
-                  </span>
-                  <ChevronRight className="h-4 w-4 text-slate-400" />
-                </Link>
-                {!ctx.isActing ? (
-                  <Link href="/portal/access" className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 text-slate-700 transition">
-                    <span className="flex items-center text-sm font-semibold gap-2">
-                      <FileText className="h-4 w-4 text-emerald-600" />
-                      {t.portal.actions.helpers}
-                    </span>
-                    <ChevronRight className="h-4 w-4 text-slate-400" />
-                  </Link>
-                ) : null}
-                <Link href="/membership" className="w-full flex items-center justify-between p-3 rounded-lg border border-slate-100 hover:bg-slate-50 text-slate-700 transition">
-                  <span className="flex items-center text-sm font-semibold gap-2">
-                    <FileText className="h-4 w-4 text-emerald-600" />
-                    {t.portal.actions.renew}
-                  </span>
-                  <ChevronRight className="h-4 w-4 text-slate-400" />
-                </Link>
-              </CardContent>
-            </Card>
-
-            {/* Profile Info Summary */}
-            <Card className="shadow-md bg-white border border-slate-100">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg font-bold text-slate-900">{t.portal.profile.title}</CardTitle>
-                  <CardDescription>Your registered contact details</CardDescription>
-                </div>
-                <User className="h-5 w-5 text-slate-400" />
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div>
-                  <span className="text-xs text-slate-400 font-semibold block uppercase">Phone Number</span>
-                  <span className="text-slate-800 font-medium">{member.phone || 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="text-xs text-slate-400 font-semibold block uppercase">Postal Address</span>
-                  <span className="text-slate-800 font-medium">{member.address || 'N/A'}</span>
-                </div>
-                {member.husbandWife && (
-                  <div>
-                    <span className="text-xs text-slate-400 font-semibold block uppercase">Spouse</span>
-                    <span className="text-slate-800 font-medium">{member.husbandWife}</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Form Submissions Status */}
-            <Card className="shadow-md bg-white border border-slate-100">
-              <CardHeader>
-                <CardTitle className="text-lg font-bold text-slate-900">{t.portal.submissions.title}</CardTitle>
-                <CardDescription>Recent form submission states</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {member.submissions.length === 0 ? (
-                  <div className="text-center py-4 text-slate-400 text-xs">
-                    No recent submissions found.
-                  </div>
-                ) : (
-                  member.submissions.map((sub) => (
-                    <div key={sub.id} className="flex justify-between items-center text-xs p-2 rounded-lg bg-slate-50">
-                      <div>
-                        <p className="font-semibold text-slate-800">{sub.formType}</p>
-                        <span className="text-[10px] text-slate-400">
-                          {new Date(sub.createdAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                      {sub.status === 'APPROVED' && (
-                        <Badge className="bg-emerald-100 text-emerald-800 border-none font-semibold text-[10px] flex items-center gap-1">
-                          <CheckCircle2 className="h-3 w-3" /> APPROVED
-                        </Badge>
-                      )}
-                      {sub.status === 'PENDING' && (
-                        <Badge className="bg-amber-100 text-amber-800 border-none font-semibold text-[10px] flex items-center gap-1">
-                          <Clock className="h-3 w-3" /> PENDING
-                        </Badge>
-                      )}
-                      {sub.status === 'PROCESSING' && (
-                        <Badge className="bg-blue-100 text-blue-800 border-none font-semibold text-[10px] flex items-center gap-1">
-                          <Clock className="h-3 w-3" /> PROCESSING
-                        </Badge>
-                      )}
-                      {sub.status === 'REJECTED' && (
-                        <Badge className="bg-rose-100 text-rose-800 border-none font-semibold text-[10px]">
-                          REJECTED
-                        </Badge>
-                      )}
+                  <dl className="grid gap-4 sm:grid-cols-2">
+                    <div className="rounded-2xl bg-muted/60 p-4">
+                      <dt className="text-base text-muted-foreground">{t.dashboard.benefitsMajor}</dt>
+                      <dd className="mt-1 text-2xl font-bold">
+                        <MoneyAmount cents={standing.benefits.majorDeathCents} />
+                      </dd>
                     </div>
-                  ))
+                    <div className="rounded-2xl bg-muted/60 p-4">
+                      <dt className="text-base text-muted-foreground">{t.dashboard.benefitsRelative}</dt>
+                      <dd className="mt-1 text-2xl font-bold">
+                        <MoneyAmount cents={standing.benefits.relativeOrHardshipCents} />
+                      </dd>
+                    </div>
+                  </dl>
                 )}
-              </CardContent>
-            </Card>
+              </SectionCard>
+            ) : null}
+
+            <SectionCard title={t.dashboard.historyTitle} icon={<History className="h-5 w-5 text-primary" />}>
+              <LedgerHistory entries={entries} t={t} locale={locale} />
+            </SectionCard>
+          </div>
+
+          <div className="space-y-8">
+            {switchable.length > 0 ? <AccountSwitcher accounts={switchable} /> : null}
+            {quickLinks}
+            <SectionCard title={t.dashboard.profileTitle} icon={<User className="h-5 w-5 text-primary" />}>
+              <dl className="space-y-4 text-base">
+                <div>
+                  <dt className="text-sm font-semibold text-muted-foreground">{t.dashboard.phone}</dt>
+                  <dd className="font-medium">{member.phone || t.dashboard.notRecorded}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-semibold text-muted-foreground">{t.dashboard.address}</dt>
+                  <dd className="font-medium">{member.address || t.dashboard.notRecorded}</dd>
+                </div>
+                {member.husbandWife ? (
+                  <div>
+                    <dt className="text-sm font-semibold text-muted-foreground">{t.dashboard.spouse}</dt>
+                    <dd className="font-medium">{member.husbandWife}</dd>
+                  </div>
+                ) : null}
+              </dl>
+            </SectionCard>
           </div>
         </div>
-      </main>
-
-      <Footer />
-    </div>
+      </div>
+    </PageShell>
   );
 }

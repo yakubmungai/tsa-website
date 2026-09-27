@@ -1,24 +1,23 @@
 'use client';
 
-import { useState } from 'react';
-import * as XLSX from 'xlsx';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/components/ui/table';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Search, Download, FileText, Plus } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import * as XLSX from 'xlsx';
+import { ChevronRight, FileText, Plus, Search, Sheet } from 'lucide-react';
+import { toast } from 'sonner';
+import { Input } from '@/components/ui/input';
+import { formatUSD } from '@/lib/money';
+import type { StandingTier } from '@/lib/finance/constants';
+import { recordMemberExport } from '@/features/finance/admin-actions';
+import { usePortalStrings } from '@/components/portal/use-portal-strings';
+import { MoneyAmount } from '@/components/portal/money';
+import { StatusBadge, type Tone } from '@/components/portal/status-badge';
+import { EmptyState } from '@/components/portal/empty-state';
 
-interface MemberWithBalance {
+export interface DirectoryMember {
   id: string;
   names: string;
+  memberNumber: number | null;
   phone: string | null;
   address: string | null;
   husbandWife: string | null;
@@ -26,289 +25,257 @@ interface MemberWithBalance {
   parents: string[];
   children: string[];
   siblings: string[];
-  witnesses: any;
-  nextOfKin: any;
-  balance: number;
+  witnesses: unknown;
+  nextOfKin: unknown;
+  advanceCents: number;
+  outstandingCents: number;
+  netCents: number;
+  tier: StandingTier;
 }
 
-export function AdminMembersList({ initialMembers }: { initialMembers: MemberWithBalance[] }) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [balanceFilter, setBalanceFilter] = useState<'all' | 'debt' | 'credit' | 'paid'>('all');
+const TIER_TONE: Record<StandingTier, Tone> = {
+  FULL: 'success',
+  REDUCED: 'warning',
+  MINIMAL: 'warning',
+  VOLUNTARY: 'danger',
+};
 
-  const filteredMembers = initialMembers.filter(member => {
-    // Search filter
-    const matchesSearch = member.names.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (member.phone && member.phone.includes(searchTerm));
+type Filter = 'all' | 'owing' | 'below' | 'full';
 
-    // Balance filter
-    let matchesBalance = true;
-    if (balanceFilter === 'debt') matchesBalance = member.balance < 0;
-    else if (balanceFilter === 'credit') matchesBalance = member.balance > 0;
-    else if (balanceFilter === 'paid') matchesBalance = member.balance === 0;
+function contactList(value: unknown): string {
+  if (!Array.isArray(value)) return '';
+  return value
+    .map((c: { name?: string; phone?: string }) => `${c?.name ?? ''}${c?.phone ? ` (${c.phone})` : ''}`.trim())
+    .filter(Boolean)
+    .join(', ');
+}
 
-    return matchesSearch && matchesBalance;
-  });
-
-  // Export database profiles to Excel (excludes balances)
-  const handleExportDatabase = () => {
-    const getNames = (arr: any) => {
-      if (Array.isArray(arr)) return arr.join(', ');
-      return '';
-    };
-
-    const getJsonNames = (arr: any) => {
-      if (Array.isArray(arr)) {
-        return arr.map((item: any) => `${item.name || ''} ${item.phone ? `(${item.phone})` : ''}`).filter(Boolean).join(', ');
-      }
-      return '';
-    };
-
-    const dataToExport = filteredMembers.map((m, idx) => ({
-      'No.': idx + 1,
-      'Names': m.names,
-      'Phone': m.phone || 'N/A',
-      'Address': m.address || 'N/A',
-      'Husband/Wife': m.husbandWife || 'N/A',
-      'Spouse Phone': m.spousePhone || 'N/A',
-      'Parents': getNames(m.parents),
-      'Children': getNames(m.children),
-      'Sisters/Brothers': getNames(m.siblings),
-      'Witnesses/Referees': getJsonNames(m.witnesses),
-      'Next Of Kin / Supervisors': getJsonNames(m.nextOfKin),
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'TSA Database');
-
-    // Auto-fit column widths
-    const maxLens = Object.keys(dataToExport[0] || {}).map(key =>
-      Math.max(key.length, ...dataToExport.map(row => String((row as any)[key]).length))
-    );
-    worksheet['!cols'] = maxLens.map(len => ({ wch: len + 3 }));
-
-    XLSX.writeFile(workbook, `TSA_Database_Backup_${new Date().toISOString().split('T')[0]}.xlsx`);
-  };
-
-  // Helper to load image as base64 client-side
-  const getBase64ImageFromUrl = async (imageUrl: string): Promise<string> => {
-    const res = await fetch(imageUrl);
+async function logoDataUrl(): Promise<string | null> {
+  try {
+    const res = await fetch('/images/tsa-logo.png');
     const blob = await res.blob();
-    return new Promise((resolve, reject) => {
+    return await new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
       reader.onerror = reject;
       reader.readAsDataURL(blob);
     });
-  };
+  } catch {
+    return null;
+  }
+}
 
-  // Export PDF Report of alphabetical names and net balances (WhatsApp sharing optimized)
-  const handleExportPDF = async () => {
+export function AdminMembersList({ members }: { members: DirectoryMember[] }) {
+  const t = usePortalStrings();
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<Filter>('all');
+
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return members.filter((m) => {
+      const matches =
+        !q ||
+        m.names.toLowerCase().includes(q) ||
+        (m.phone ?? '').includes(q) ||
+        (m.memberNumber !== null && `tsa-${m.memberNumber}`.includes(q));
+      const passes =
+        filter === 'all' ||
+        (filter === 'owing' && m.outstandingCents > 0) ||
+        (filter === 'below' && m.tier !== 'FULL') ||
+        (filter === 'full' && m.tier === 'FULL');
+      return matches && passes;
+    });
+  }, [members, query, filter]);
+
+  // Exports are built in the browser, so they are logged on the server first.
+  async function logExport(format: 'EXCEL_PROFILES' | 'PDF_BALANCES') {
+    const res = await recordMemberExport({ format, rowCount: visible.length });
+    if (!res.success) {
+      toast.error(res.error);
+      return false;
+    }
+    return true;
+  }
+
+  async function exportExcel() {
+    if (!(await logExport('EXCEL_PROFILES'))) return;
+    const rows = visible.map((m, i) => ({
+      'No.': i + 1,
+      'Member No.': m.memberNumber ?? '',
+      Names: m.names,
+      Phone: m.phone ?? '',
+      Address: m.address ?? '',
+      'Husband/Wife': m.husbandWife ?? '',
+      'Spouse Phone': m.spousePhone ?? '',
+      Parents: m.parents.join(', '),
+      Children: m.children.join(', '),
+      'Sisters/Brothers': m.siblings.join(', '),
+      'Witnesses/Referees': contactList(m.witnesses),
+      'Next Of Kin': contactList(m.nextOfKin),
+    }));
+    const sheet = XLSX.utils.json_to_sheet(rows);
+    const widths = Object.keys(rows[0] ?? {}).map((key) =>
+      Math.max(key.length, ...rows.map((r) => String(r[key as keyof typeof r]).length))
+    );
+    sheet['!cols'] = widths.map((w) => ({ wch: w + 3 }));
+    const book = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(book, sheet, 'TSA Database');
+    XLSX.writeFile(book, `TSA_Database_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }
+
+  async function exportPdf() {
+    if (!(await logExport('PDF_BALANCES'))) return;
     const { jsPDF } = await import('jspdf');
     const autoTable = (await import('jspdf-autotable')).default;
-
     const doc = new jsPDF();
+    const logo = await logoDataUrl();
+    if (logo) doc.addImage(logo, 'PNG', 14, 11, 18, 18);
 
-    try {
-      // Load and add TSA Logo
-      const logoBase64 = await getBase64ImageFromUrl('/images/tsa-logo.png');
-      doc.addImage(logoBase64, 'PNG', 14, 11, 18, 18);
-    } catch (e) {
-      console.warn('Could not load logo in PDF, falling back to text only', e);
-    }
-
-    // Add TSA header text shifted to make space for logo
+    // TSA green, from the site theme (hsl 133 55% 40%).
+    const green: [number, number, number] = [46, 158, 62];
     doc.setFont('Helvetica', 'bold');
     doc.setFontSize(15);
-    doc.setTextColor(16, 124, 65); // Emerald green theme
+    doc.setTextColor(...green);
     doc.text('TANZANIA SHARING ASSOCIATION (TSA)', 35, 19);
-
-    // Add subtitle
     doc.setFontSize(11);
     doc.setFont('Helvetica', 'normal');
-    doc.setTextColor(100, 116, 139); // Slate-500
-    doc.text('Official Member Balance Statement', 35, 25);
-
-    // Add date
-    const dateStr = new Date().toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    doc.setTextColor(100, 110, 120);
+    doc.text('Taarifa ya Akiba za Wanachama / Member Savings Statement', 35, 25);
     doc.setFontSize(8.5);
-    doc.text(`Generated on: ${dateStr}`, 35, 31);
-
-    // Header divider line
+    doc.text(
+      `${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`,
+      35,
+      31
+    );
     doc.setDrawColor(226, 232, 240);
     doc.line(14, 37, 196, 37);
 
-    // Sort members alphabetically for public listing
-    const sortedMembers = [...filteredMembers].sort((a, b) => a.names.localeCompare(b.names));
-    const tableRows = sortedMembers.map((m, idx) => [
-      String(idx + 1),
-      m.names,
-      m.balance >= 0 ? `+$${m.balance.toFixed(2)}` : `-$${Math.abs(m.balance).toFixed(2)}`
-    ]);
-
-    // Build the table
+    const sorted = [...visible].sort((a, b) => a.names.localeCompare(b.names));
     autoTable(doc, {
       startY: 43,
-      head: [['No.', 'Member Name', 'Net Balance']],
-      body: tableRows,
+      head: [['No.', 'Jina / Name', 'Akiba / Savings', 'Deni / Owes']],
+      body: sorted.map((m, i) => [
+        String(i + 1),
+        m.names,
+        formatUSD(m.advanceCents),
+        m.outstandingCents > 0 ? formatUSD(m.outstandingCents) : '—',
+      ]),
       theme: 'striped',
-      headStyles: {
-        fillColor: [16, 124, 65], // Emerald green
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-        fontSize: 10,
-        halign: 'left'
-      },
+      headStyles: { fillColor: green, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 10 },
       columnStyles: {
-        0: { cellWidth: 15 },
-        1: { cellWidth: 135 },
-        2: { cellWidth: 32, fontStyle: 'bold', halign: 'right' }
+        0: { cellWidth: 14 },
+        1: { cellWidth: 104 },
+        2: { cellWidth: 32, halign: 'right', fontStyle: 'bold' },
+        3: { cellWidth: 32, halign: 'right' },
       },
-      styles: {
-        fontSize: 9,
-        cellPadding: 3
-      },
-      didDrawCell: (data) => {
-        // Color balance column values dynamically (index 2 is Net Balance now)
-        if (data.column.index === 2 && data.cell.section === 'body') {
-          const val = data.cell.text[0];
-          if (val.startsWith('-')) {
-            doc.setTextColor(225, 29, 72); // Rose-600 (Red)
-          } else if (val.startsWith('+')) {
-            doc.setTextColor(22, 163, 74); // Green-600
-          }
-        }
-      }
+      styles: { fontSize: 9, cellPadding: 3 },
     });
+    doc.save(`TSA_Member_Savings_${new Date().toISOString().slice(0, 10)}.pdf`);
+  }
 
-    doc.save(`TSA_Member_Balances_Statement_${new Date().toISOString().split('T')[0]}.pdf`);
-  };
+  const filters: { key: Filter; label: string }[] = [
+    { key: 'all', label: t.admin.members.all },
+    { key: 'owing', label: t.admin.members.owes },
+    { key: 'below', label: t.admin.members.belowMinimum },
+    { key: 'full', label: t.tiers.FULL },
+  ];
 
   return (
-    <Card className="w-full bg-white shadow-md border border-slate-100">
-      <CardHeader className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-6 border-b border-slate-50">
-        <div>
-          <CardTitle className="text-xl font-bold text-slate-900 font-sans">TSA Member Directory</CardTitle>
-          <CardDescription className="font-sans">Manage profile details, lookup transactions, and export backups.</CardDescription>
-        </div>
-        <div className="flex flex-wrap gap-2 w-full md:w-auto font-sans">
-          <Button asChild className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs gap-1.5 h-9">
-            <Link href="/admin/members/new">
-              <Plus className="h-4 w-4" />
-              Add Member
-            </Link>
-          </Button>
-          <Button onClick={handleExportDatabase} variant="outline" className="border-slate-200 text-xs font-semibold gap-1.5 h-9">
-            <Download className="h-4 w-4" />
-            Export Database
-          </Button>
-          <Button onClick={handleExportPDF} variant="outline" className="border-slate-200 text-xs font-semibold gap-1.5 h-9">
-            <FileText className="h-4 w-4 text-emerald-600" />
-            Export PDF Report
-          </Button>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-6 pt-6 font-sans">
-        {/* Search and Filters */}
-        <div className="flex flex-col md:flex-row gap-4 items-center">
-          <div className="relative w-full md:w-80">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+    <section className="rounded-3xl border border-border/60 bg-card shadow-sm">
+      <div className="space-y-4 border-b border-border/60 p-5 sm:p-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" aria-hidden />
             <Input
-              placeholder="Search by name or phone..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t.admin.members.search}
+              className="h-12 rounded-xl pl-12 text-base"
+              aria-label={t.admin.members.search}
             />
           </div>
-
-          <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
-            <Button
-              variant={balanceFilter === 'all' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setBalanceFilter('all')}
-              className="text-xs font-semibold"
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/admin/members/new"
+              className="btn-shimmer inline-flex min-h-12 items-center gap-2 rounded-xl px-4 text-base font-semibold text-primary-foreground"
             >
-              All ({initialMembers.length})
-            </Button>
-            <Button
-              variant={balanceFilter === 'debt' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setBalanceFilter('debt')}
-              className="text-xs font-semibold"
+              <Plus className="h-5 w-5" aria-hidden />
+              {t.admin.members.addMember}
+            </Link>
+            <button
+              type="button"
+              onClick={exportExcel}
+              className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-border px-4 text-base font-semibold hover:bg-muted"
             >
-              Outstanding Dues ({initialMembers.filter(m => m.balance < 0).length})
-            </Button>
-            <Button
-              variant={balanceFilter === 'credit' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setBalanceFilter('credit')}
-              className="text-xs font-semibold"
+              <Sheet className="h-5 w-5" aria-hidden />
+              {t.admin.members.exportExcel}
+            </button>
+            <button
+              type="button"
+              onClick={exportPdf}
+              className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-border px-4 text-base font-semibold hover:bg-muted"
             >
-              Advance Credit ({initialMembers.filter(m => m.balance > 0).length})
-            </Button>
-            <Button
-              variant={balanceFilter === 'paid' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setBalanceFilter('paid')}
-              className="text-xs font-semibold"
-            >
-              Settle Balances ({initialMembers.filter(m => m.balance === 0).length})
-            </Button>
+              <FileText className="h-5 w-5" aria-hidden />
+              {t.admin.members.exportPdf}
+            </button>
           </div>
         </div>
-
-        {/* Directory Table */}
-        <div className="border border-slate-100 rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader className="bg-slate-50">
-              <TableRow>
-                <TableHead className="w-12 font-bold text-slate-700">No.</TableHead>
-                <TableHead className="font-bold text-slate-700">Names</TableHead>
-                <TableHead className="font-bold text-slate-700">Phone</TableHead>
-                <TableHead className="font-bold text-slate-700">Postal Address</TableHead>
-                <TableHead className="font-bold text-slate-700 text-right">Net Balance</TableHead>
-                <TableHead className="w-24 text-right font-bold text-slate-700">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredMembers.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10 text-slate-400">
-                    No members match search query.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredMembers.map((m, idx) => (
-                  <TableRow key={m.id} className="hover:bg-slate-50/50">
-                    <TableCell className="font-medium text-slate-500">{idx + 1}</TableCell>
-                    <TableCell className="font-semibold text-slate-800">{m.names}</TableCell>
-                    <TableCell className="text-slate-600 font-mono text-xs">{m.phone || 'N/A'}</TableCell>
-                    <TableCell className="text-slate-600 max-w-xs truncate text-xs">{m.address || 'N/A'}</TableCell>
-                    <TableCell className="text-right">
-                      <span className={`font-bold text-sm ${m.balance > 0 ? 'text-emerald-600' : m.balance < 0 ? 'text-rose-600' : 'text-slate-500'}`}>
-                        {m.balance >= 0 ? `+$${m.balance.toFixed(2)}` : `-$${Math.abs(m.balance).toFixed(2)}`}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button asChild size="sm" variant="outline" className="text-xs font-semibold px-2 py-1 h-7 border-slate-200">
-                        <Link href={`/admin/members/${m.id}`}>
-                          View Profile
-                        </Link>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+        <div className="flex flex-wrap gap-2" role="group">
+          {filters.map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              onClick={() => setFilter(f.key)}
+              aria-pressed={filter === f.key}
+              className={
+                filter === f.key
+                  ? 'min-h-10 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground'
+                  : 'min-h-10 rounded-full border border-border px-4 text-sm font-semibold text-muted-foreground hover:bg-muted'
+              }
+            >
+              {f.label}
+            </button>
+          ))}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      {visible.length === 0 ? (
+        <EmptyState icon={<Search className="h-6 w-6" />} title={t.admin.members.empty} />
+      ) : (
+        <ul className="divide-y divide-border/60">
+          {visible.map((m) => (
+            <li key={m.id}>
+              <Link
+                href={`/admin/members/${m.id}`}
+                className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-muted/50 sm:px-6"
+              >
+                <div className="min-w-0 flex-1 space-y-1">
+                  <p className="truncate text-lg font-semibold">{m.names}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {[m.memberNumber ? `TSA-${m.memberNumber}` : null, m.phone].filter(Boolean).join(' · ')}
+                  </p>
+                </div>
+                <div className="hidden text-right sm:block">
+                  <p className="text-sm text-muted-foreground">{t.admin.members.holds}</p>
+                  <MoneyAmount cents={m.advanceCents} className="text-base font-semibold" />
+                </div>
+                <div className="hidden w-28 text-right sm:block">
+                  <p className="text-sm text-muted-foreground">{t.admin.members.owes}</p>
+                  {m.outstandingCents > 0 ? (
+                    <MoneyAmount cents={m.outstandingCents} className="text-base font-semibold text-warning" />
+                  ) : (
+                    <span className="text-base text-muted-foreground">—</span>
+                  )}
+                </div>
+                <StatusBadge tone={TIER_TONE[m.tier]} className="hidden md:inline-flex">
+                  {t.tiers[m.tier]}
+                </StatusBadge>
+                <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
-

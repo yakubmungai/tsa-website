@@ -241,6 +241,10 @@ export const PAYMENT_CHANNELS = {
   cashAppTag: '$TSA2025',
 } as const;
 
+/** Art 3 — the association's phone, used for "I need help" in the portal. */
+export const TSA_HELP_PHONE_E164 = '+12066020506';
+export const TSA_HELP_PHONE_DISPLAY = '(206) 602-0506';
+
 /** The reference a member writes in the Zelle memo, so a deposit can be matched. */
 export function paymentReference(memberNumber: number | null | undefined): string | null {
   return memberNumber ? `TSA-${memberNumber}` : null;

@@ -78,7 +78,7 @@ export const DEMO_PERSONAS = {
     labelSw: 'Msimamizi',
     descriptionEn: 'Full access: members, ledger, exports, forms queue',
     descriptionSw: 'Ruhusa kamili: wanachama, hesabu, ripoti, fomu',
-    landing: '/admin/members',
+    landing: '/admin',
   },
   member: {
     email: 'demo.member@tsa.test',
