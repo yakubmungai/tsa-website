@@ -42,7 +42,7 @@ async function main() {
   if (/tansha\.org/i.test(process.env.NEXT_PUBLIC_SITE_URL ?? '')) throw new Error('Refusing: points at tansha.org.');
   console.log('\nPayments verification\n');
   await clearAllData(db);
-  await seedDemoData(db);
+  await seedDemoData(db, () => {}, { scenarios: false });
   const today = new Date();
 
   const amina = await db.member.findFirstOrThrow({ where: { names: 'Amina Hassan Mrisho' } });

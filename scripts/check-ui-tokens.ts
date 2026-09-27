@@ -32,14 +32,12 @@ const FILES = [
   'src/components/phone-login-form.tsx',
   'src/components/login-form.tsx',
   'src/components/demo-sign-in.tsx',
+  'src/components/demo-banner.tsx',
+  'src/components/demo-reset.tsx',
 ];
 
-/**
- * Being rewritten separately; remove from this list once they land on tokens.
- * - src/app/admin/demo: the demo control page
- * - src/app/portal/forms: the member forms flow
- */
-const IGNORE = ['src/app/admin/demo', 'src/app/portal/forms'];
+/** Paths to skip. Empty: every portal and admin screen is on the theme. */
+const IGNORE: string[] = [];
 
 const PALETTE =
   /\b(?:bg|text|border|from|to|via|ring|fill|stroke|divide|outline|placeholder)-(?:slate|gray|zinc|neutral|stone|emerald|amber|rose|red|green|blue|sky|indigo|yellow|orange|lime|teal|cyan|violet|purple|fuchsia|pink)-\d{2,3}\b/g;

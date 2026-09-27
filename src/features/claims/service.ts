@@ -155,9 +155,11 @@ export interface AnnounceResult {
  */
 export async function announceClaim(
   claimId: string,
-  userId: string | null
+  userId: string | null,
+  /** Only the demo seed passes this, to build cases announced in the past. */
+  at?: Date
 ): Promise<{ claim: Claim; result: AnnounceResult }> {
-  const asOf = await now();
+  const asOf = at ?? (await now());
 
   return db.$transaction(
     async (tx) => {

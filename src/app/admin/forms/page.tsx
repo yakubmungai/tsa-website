@@ -11,6 +11,8 @@ export default async function AdminFormsPage() {
 
   // Fetch all form submissions
   const submissionsRaw = await db.formSubmission.findMany({
+    // Testers' notes from the demo live on the demo page, not in the queue.
+    where: { formType: { not: 'DEMO_FEEDBACK' } },
     include: {
       member: true,
     },

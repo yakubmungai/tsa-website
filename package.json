@@ -12,7 +12,7 @@
     "test:watch": "vitest",
     "lint": "eslint . && tsx scripts/check-ui-tokens.ts",
     "lint:ui": "tsx scripts/check-ui-tokens.ts",
-    "seed:demo": "tsx prisma/seed-demo.ts",
+    "seed:demo": "tsx --conditions=react-server prisma/seed-demo.ts",
     "verify:phone-login": "tsx --conditions=react-server scripts/verify-phone-login.ts",
     "backfill:phones": "tsx scripts/backfill-phone-e164.ts",
     "verify:forms": "tsx --conditions=react-server scripts/verify-form-submissions.ts",

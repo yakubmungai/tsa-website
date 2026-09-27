@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { db as defaultDb } from '@/lib/db';
 import { computeStanding, duesYearFor } from '@/lib/finance/balance';
+import { seedScenarios } from './scenarios';
 
 /**
  * Demo data for the leaders' test environment.
@@ -36,6 +37,8 @@ export interface DemoMemberSpec {
   witnesses?: { name: string; phone: string }[];
   nextOfKin?: { name: string; phone: string }[];
   ledger: Ledger;
+  /** Recently admitted — for the Art 4.5 six-month wait. Default: two years ago. */
+  joinedMonthsAgo?: number;
   /** Why this member is in the demo set — shown in the seed output. */
   note: string;
 }
@@ -150,6 +153,16 @@ export const DEMO_MEMBERS: DemoMemberSpec[] = [
     ledger: { advance: 80, registration: 100, membership: 25 },
     note: 'Shares a handset with Salma, and is on a different tier to her.',
   },
+  {
+    names: 'Rose Mwakyusa',
+    phone: '+17135550114',
+    address: '2300 Kirby Dr, Houston, TX 77019',
+    husbandWife: 'Elia Mwakyusa',
+    parents: ['Anyitike Mwakyusa'],
+    ledger: { advance: 100, registration: 100, membership: 25 },
+    joinedMonthsAgo: 2,
+    note: 'New member (joined 2 months ago) — her cases are kihiari until 6 months (Art 4.5).',
+  },
 ];
 
 /** Kept in step with DEMO_PERSONAS in src/lib/demo.ts. */
@@ -158,6 +171,8 @@ export const DEMO_ACCOUNTS = [
   { email: 'demo.member@tsa.test', role: 'MEMBER' as const, linkTo: 'Amina Hassan Mrisho' },
   { email: 'demo.arrears@tsa.test', role: 'MEMBER' as const, linkTo: 'Daniel Kileo' },
   { email: 'demo.helper@tsa.test', role: 'MEMBER' as const, linkTo: 'Upendo Massawe' },
+  { email: 'demo.newmember@tsa.test', role: 'MEMBER' as const, linkTo: 'Rose Mwakyusa' },
+  { email: 'demo.duesonly@tsa.test', role: 'MEMBER' as const, linkTo: 'Grace Ndosi' },
 ];
 
 /** Noon Houston time on a date — the convention for dates with no time of day. */
@@ -233,7 +248,8 @@ export async function clearAllData(client: PrismaClient = defaultDb as PrismaCli
   await client.assessment.deleteMany({});
   await client.claim.deleteMany({});
   await client.transaction.deleteMany({});
-  await client.formSubmission.deleteMany({});
+  // Testers' notes survive a reset — they are about the system, not the demo data.
+  await client.formSubmission.deleteMany({ where: { formType: { not: 'DEMO_FEEDBACK' } } });
   await client.actingSession.deleteMany({});
   await client.delegation.deleteMany({});
   await client.authTicket.deleteMany({});
@@ -256,7 +272,9 @@ export interface SeedResult {
  */
 export async function seedDemoData(
   client: PrismaClient = defaultDb as PrismaClient,
-  log: (line: string) => void = () => {}
+  log: (line: string) => void = () => {},
+  /** Cases, payments and a funeral notice to practise on. Off for the verify scripts. */
+  opts: { scenarios?: boolean } = { scenarios: true }
 ): Promise<SeedResult> {
   const byName = new Map<string, string>();
   const phoneByName = new Map<string, string>();
@@ -280,7 +298,9 @@ export async function seedDemoData(
         witnesses: (m.witnesses ?? []) as Prisma.InputJsonValue[],
         nextOfKin: (m.nextOfKin ?? []) as Prisma.InputJsonValue[],
         memberNumber,
-        joinedAt: orgNoon(duesYearFor(asOf) - 2, 5, 1),
+        joinedAt: m.joinedMonthsAgo
+          ? new Date(asOf.getTime() - m.joinedMonthsAgo * 30 * 24 * 3600 * 1000)
+          : orgNoon(duesYearFor(asOf) - 2, 5, 1),
         joinedAtEstimated: false,
         status: 'ACTIVE',
       },
@@ -314,6 +334,8 @@ export async function seedDemoData(
     });
     log(`  ${account.email.padEnd(24)} ${account.role}${account.linkTo ? ` -> ${account.linkTo}` : ''}`);
   }
+
+  if (opts.scenarios !== false) await seedScenarios(client, asOf, log);
 
   const ledgerEntries = await client.ledgerEntry.count();
   return {

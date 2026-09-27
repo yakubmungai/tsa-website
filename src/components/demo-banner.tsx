@@ -1,58 +1,106 @@
 'use client';
 
-import { useState } from 'react';
-import { FlaskConical, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState, useTransition } from 'react';
+import { usePathname } from 'next/navigation';
+import { CalendarClock, ChevronDown, ChevronUp, FlaskConical, MessageSquarePlus } from 'lucide-react';
+import { submitDemoFeedback } from '@/features/demo/tools';
 
 /**
- * Marks this deployment as the test system.
+ * Marks this deployment as the test system, and collects testers' notes.
  *
- * Anchored to the bottom of the viewport rather than the top: the navbar is
- * `fixed top-0`, so a banner up there covers the navigation, and pushing it
- * down would mean changing the top padding on every page.
- *
- * Collapsible, but never dismissible. Its whole job is to be present at the
- * moment nobody is thinking about which site they are on — and a leader who
- * dismissed it once would never see it again. Collapsed it is a small marker in
- * the corner; it does not disappear.
+ * A small pill in the bottom-left corner, clear of the page's buttons.
+ * Collapsible but never dismissible: its job is to be present at the moment
+ * nobody is thinking about which site they are on. Opened, it says so in both
+ * languages, shows the test date when the time machine has moved it, and
+ * takes a note ("Toa maoni") that lands on the demo page with the page and
+ * sign-in it came from.
  */
-export function DemoBanner() {
+export function DemoBanner({ testDate }: { testDate: string | null }) {
   const [expanded, setExpanded] = useState(false);
+  const [comment, setComment] = useState('');
+  const [sent, setSent] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const pathname = usePathname();
+
+  function send() {
+    startTransition(async () => {
+      const res = await submitDemoFeedback({ page: pathname, comment });
+      if (res.success) {
+        setSent(true);
+        setComment('');
+      }
+    });
+  }
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] flex justify-center print:hidden">
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
-        aria-expanded={expanded}
-        className={`pointer-events-auto flex items-center gap-2 border-2 border-b-0 border-amber-600 bg-amber-400 text-amber-950 shadow-lg transition-all hover:bg-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 focus-visible:ring-offset-2 ${
-          expanded
-            ? 'w-full max-w-3xl rounded-t-lg px-5 py-3'
-            : 'rounded-t-md px-3 py-1.5'
-        }`}
-      >
-        <FlaskConical className="h-4 w-4 shrink-0" aria-hidden />
-
-        {expanded ? (
-          <span className="flex-1 text-left">
-            <span className="block text-sm font-bold">
-              MFUMO WA MAJARIBIO — HII SI TAARIFA HALISI
+    <div className="pointer-events-none fixed bottom-3 left-3 z-[60] max-w-[calc(100vw-1.5rem)] print:hidden">
+      {expanded ? (
+        <div className="pointer-events-auto w-[22rem] max-w-full space-y-3 rounded-2xl border-2 border-accent bg-card p-4 shadow-xl">
+          <button
+            type="button"
+            onClick={() => setExpanded(false)}
+            aria-expanded
+            className="flex w-full items-start justify-between gap-2 text-left"
+          >
+            <span className="flex items-start gap-2">
+              <FlaskConical className="mt-0.5 h-5 w-5 shrink-0 text-accent-foreground" aria-hidden />
+              <span>
+                <span className="block text-sm font-bold">MFUMO WA MAJARIBIO — SI TAARIFA HALISI</span>
+                <span className="block text-sm text-muted-foreground">Test system — not real data. Nothing here affects members.</span>
+              </span>
             </span>
-            <span className="block text-sm font-medium opacity-80">
-              Test system — not real data. Nothing here affects members.
-            </span>
-          </span>
-        ) : (
-          <span className="text-xs font-bold tracking-wide">
-            MAJARIBIO · TEST
-          </span>
-        )}
-
-        {expanded ? (
-          <ChevronDown className="h-4 w-4 shrink-0" aria-hidden />
-        ) : (
-          <ChevronUp className="h-4 w-4 shrink-0" aria-hidden />
-        )}
-      </button>
+            <ChevronDown className="h-5 w-5 shrink-0" aria-hidden />
+          </button>
+          {testDate ? (
+            <p className="flex items-center gap-2 rounded-xl bg-accent/30 px-3 py-2 text-sm font-semibold">
+              <CalendarClock className="h-4 w-4" aria-hidden />
+              Tarehe ya majaribio / Test date: {testDate}
+            </p>
+          ) : null}
+          {sent ? (
+            <p className="rounded-xl bg-success/10 px-3 py-2 text-sm font-semibold text-success">
+              Asante! Maoni yamepokelewa. / Thank you — note received.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              <label htmlFor="demo-feedback" className="flex items-center gap-2 text-sm font-semibold">
+                <MessageSquarePlus className="h-4 w-4" aria-hidden />
+                Toa maoni / Report a problem
+              </label>
+              <textarea
+                id="demo-feedback"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Nini hakikueleweka au hakikufanya kazi? / What was confusing or broken?"
+                className="min-h-20 w-full rounded-xl border border-input bg-background p-2 text-sm"
+              />
+              <button
+                type="button"
+                onClick={send}
+                disabled={pending || comment.trim().length < 3}
+                className="btn-shimmer min-h-10 w-full rounded-xl text-sm font-bold text-primary-foreground disabled:opacity-50"
+              >
+                {pending ? '…' : 'Tuma / Send'}
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            setExpanded(true);
+            setSent(false);
+          }}
+          aria-expanded={false}
+          className="pointer-events-auto flex items-center gap-2 rounded-full border-2 border-accent-foreground/20 bg-accent px-3 py-1.5 text-xs font-bold tracking-wide text-accent-foreground shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <FlaskConical className="h-4 w-4" aria-hidden />
+          MAJARIBIO · TEST
+          {testDate ? <span className="font-semibold">· {testDate}</span> : null}
+          <ChevronUp className="h-4 w-4" aria-hidden />
+        </button>
+      )}
     </div>
   );
 }

@@ -55,7 +55,7 @@ export async function overdueByMember(asOf: Date): Promise<Map<string, number>> 
 export const getAdminCounts = cache(async (): Promise<AdminCounts> => {
   const asOf = await now();
   const [forms, claims, collecting, overdue, reportedPayments, unassignedDeposits] = await Promise.all([
-    db.formSubmission.count({ where: { status: 'PENDING' } }),
+    db.formSubmission.count({ where: { status: 'PENDING', formType: { not: 'DEMO_FEEDBACK' } } }),
     db.claim.count({ where: { status: { in: ['SUBMITTED', 'UNDER_REVIEW'] } } }),
     db.claim.count({ where: { status: 'COLLECTING' } }),
     overdueByMember(asOf),

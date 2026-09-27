@@ -46,7 +46,7 @@ export function DemoReset() {
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
-        <Button variant="outline" className="gap-2 border-amber-300 text-amber-800 hover:bg-amber-50">
+        <Button variant="outline" className="min-h-12 gap-2 border-2 border-warning/50 text-base font-semibold text-foreground hover:bg-warning/10">
           <RotateCcw className="h-4 w-4" />
           Rudisha data ya majaribio / Reset demo data
         </Button>
@@ -54,12 +54,12 @@ export function DemoReset() {
       <AlertDialogContent className="font-sans">
         <AlertDialogHeader>
           <AlertDialogTitle>Reset the demo data?</AlertDialogTitle>
-          <AlertDialogDescription className="space-y-2 text-slate-600">
+          <AlertDialogDescription className="space-y-2 text-base text-muted-foreground">
             <span className="block">
               Every demo member, transaction and change made while testing will be
               deleted and rebuilt from scratch.
             </span>
-            <span className="block font-medium text-slate-800">
+            <span className="block font-medium text-foreground">
               Kila kitu kilichobadilishwa wakati wa majaribio kitafutwa na kuanza upya.
             </span>
           </AlertDialogDescription>
@@ -72,7 +72,7 @@ export function DemoReset() {
               handleReset();
             }}
             disabled={loading}
-            className="bg-amber-600 hover:bg-amber-700 text-white"
+            className="bg-warning text-warning-foreground hover:bg-warning/90"
           >
             {loading ? 'Resetting...' : 'Reset'}
           </AlertDialogAction>

@@ -72,7 +72,7 @@ async function main() {
   assertSafe();
   console.log('\nClaims verification\n');
   await clearAllData(db);
-  await seedDemoData(db);
+  await seedDemoData(db, () => {}, { scenarios: false });
   const today = new Date();
 
   // ── A relative's death, FULL tier ────────────────────────────────────────
