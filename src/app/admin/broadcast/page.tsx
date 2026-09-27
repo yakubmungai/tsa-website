@@ -1,9 +1,7 @@
-import Link from 'next/link';
 import { requireAdmin } from '@/lib/session';
-import { Navbar } from '@/components/navbar';
-import { Footer } from '@/components/footer';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { getPortalStrings } from '@/lib/i18n';
+import { AdminShell } from '@/components/admin/admin-shell';
+import { PageHeader } from '@/components/portal/page-header';
 import { BroadcastComposer } from '@/components/broadcast-composer';
 
 /**
@@ -15,29 +13,14 @@ import { BroadcastComposer } from '@/components/broadcast-composer';
  */
 export default async function AdminBroadcastPage() {
   await requireAdmin();
+  const t = await getPortalStrings();
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://tansha.org';
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50">
-      <Navbar />
-      <main className="mx-auto w-full max-w-6xl flex-grow space-y-6 px-4 pb-16 pt-28 sm:px-6">
-        <div>
-          <Button asChild variant="ghost" size="sm" className="mb-3 gap-1.5 text-slate-600">
-            <Link href="/admin/members">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Members
-            </Link>
-          </Button>
-          <h1 className="text-3xl font-bold text-slate-900">Matangazo ya WhatsApp</h1>
-          <p className="mt-1 text-lg text-slate-600">
-            Compose a bilingual announcement for the TSA group.
-          </p>
-        </div>
-
-        <BroadcastComposer siteUrl={siteUrl} />
-      </main>
-      <Footer />
-    </div>
+    <AdminShell active="broadcast">
+      <PageHeader title={t.broadcast.title} subtitle={t.broadcast.subtitle} />
+      <BroadcastComposer siteUrl={siteUrl} />
+    </AdminShell>
   );
 }

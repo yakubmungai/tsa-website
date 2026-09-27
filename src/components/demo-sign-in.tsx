@@ -57,12 +57,12 @@ export function DemoSignIn({ personas }: { personas: DemoPersonaOption[] }) {
 
   return (
     <div className="space-y-3">
-      <div className="rounded-lg border-2 border-amber-300 bg-amber-50 px-4 py-3">
-        <p className="text-sm font-bold text-amber-900">Ingia kwa majaribio / Test sign-in</p>
-        <p className="mt-1 text-sm text-amber-800">
+      <div className="rounded-2xl border-2 border-warning/40 bg-warning/10 px-4 py-3">
+        <p className="text-base font-bold text-foreground">Ingia kwa majaribio / Test sign-in</p>
+        <p className="mt-1 text-base text-foreground">
           Chagua aina ya mtumiaji ili kujaribu mfumo. Taarifa zote ni za kubuni.
         </p>
-        <p className="mt-0.5 text-sm text-amber-800/80">
+        <p className="mt-0.5 text-sm text-muted-foreground">
           Choose a role to explore the system. All data is invented.
         </p>
       </div>
@@ -76,17 +76,17 @@ export function DemoSignIn({ personas }: { personas: DemoPersonaOption[] }) {
               variant="outline"
               onClick={() => handleSignIn(persona)}
               disabled={pending !== null}
-              className="h-auto w-full justify-start gap-3 px-4 py-3 text-left hover:bg-slate-50"
+              className="h-auto w-full justify-start gap-3 min-h-12 rounded-xl px-4 py-3 text-left hover:border-primary hover:bg-primary/5"
             >
-              <Icon className="h-5 w-5 shrink-0 text-emerald-700" aria-hidden />
+              <Icon className="h-5 w-5 shrink-0 text-primary" aria-hidden />
               <span className="flex flex-col gap-0.5">
-                <span className="text-base font-semibold text-slate-900">
+                <span className="text-base font-semibold text-foreground">
                   {persona.labelSw}
-                  <span className="ml-2 text-sm font-normal text-slate-500">
+                  <span className="ml-2 text-sm font-normal text-muted-foreground">
                     {persona.labelEn}
                   </span>
                 </span>
-                <span className="text-sm font-normal text-slate-600">
+                <span className="text-sm font-normal text-muted-foreground">
                   {pending === persona.key ? 'Inaingia...' : persona.descriptionEn}
                 </span>
               </span>

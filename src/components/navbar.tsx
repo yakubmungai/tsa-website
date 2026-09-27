@@ -94,11 +94,11 @@ export function Navbar() {
           </Button>
           {status === "authenticated" ? (
             <>
-              <Button asChild variant="outline" className="border-slate-200 text-xs font-semibold">
-                <Link href={session?.user?.role === 'ADMIN' ? '/admin' : '/portal'}>Dashboard</Link>
+              <Button asChild className="btn-shimmer border-0 text-sm font-semibold text-primary-foreground">
+                <Link href={session?.user?.role === 'ADMIN' ? '/admin' : '/portal'}>{t.dashboard}</Link>
               </Button>
-              <Button onClick={() => signOut({ callbackUrl: '/' })} className="bg-slate-900 hover:bg-slate-800 text-white border-0 text-xs font-semibold">
-                Logout
+              <Button variant="outline" onClick={() => signOut({ callbackUrl: '/' })} className="border-border bg-card text-sm font-semibold text-foreground hover:bg-muted">
+                {t.logout}
               </Button>
             </>
           ) : (
@@ -143,13 +143,13 @@ export function Navbar() {
             </Button>
             {status === "authenticated" ? (
               <>
-                <Button asChild variant="outline" className="mt-2 w-full border-slate-200 text-sm font-semibold justify-start">
+                <Button asChild className="btn-shimmer mt-2 min-h-12 w-full border-0 text-base font-semibold text-primary-foreground">
                   <a href={session?.user?.role === 'ADMIN' ? '/admin' : '/portal'} onClick={() => setMobileOpen(false)}>
-                    Dashboard
+                    {t.dashboard}
                   </a>
                 </Button>
-                <Button onClick={() => { signOut({ callbackUrl: '/' }); setMobileOpen(false); }} className="mt-2 w-full bg-slate-900 hover:bg-slate-800 text-white border-0 text-sm font-semibold">
-                  Logout
+                <Button variant="outline" onClick={() => { signOut({ callbackUrl: '/' }); setMobileOpen(false); }} className="mt-2 min-h-12 w-full border-border bg-card text-base font-semibold text-foreground hover:bg-muted">
+                  {t.logout}
                 </Button>
               </>
             ) : (

@@ -55,14 +55,14 @@ function EmailPasswordForm() {
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
           <div className="relative">
-            <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+            <Mail className="absolute left-3 top-4 h-4 w-4 text-muted-foreground" />
             <Input
               id="email"
               type="email"
               placeholder="name@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="pl-10"
+              className="h-12 pl-10 text-base"
               disabled={loading}
               required
             />
@@ -71,13 +71,13 @@ function EmailPasswordForm() {
         <div className="space-y-2">
           <Label htmlFor="password">Password</Label>
           <div className="relative">
-            <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+            <Lock className="absolute left-3 top-4 h-4 w-4 text-muted-foreground" />
             <Input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="pl-10"
+              className="h-12 pl-10 text-base"
               disabled={loading}
               required
             />
@@ -86,7 +86,7 @@ function EmailPasswordForm() {
 
         <Button
           type="submit"
-          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow"
+          className="btn-shimmer h-12 w-full border-0 text-base font-bold text-primary-foreground"
           disabled={loading}
         >
           {loading ? 'Signing in...' : 'Sign In'}
@@ -99,9 +99,9 @@ function EmailPasswordForm() {
 
 function Divider({ label }: { label: string }) {
   return (
-    <div className="relative text-center text-xs uppercase tracking-wide text-slate-400">
-      <span className="relative z-10 bg-white px-2">{label}</span>
-      <div className="absolute top-1/2 left-0 right-0 -z-0 border-b border-slate-200" />
+    <div className="relative text-center text-sm uppercase tracking-wide text-muted-foreground">
+      <span className="relative z-10 bg-card px-2">{label}</span>
+      <div className="absolute top-1/2 left-0 right-0 -z-0 border-b border-border" />
     </div>
   );
 }
@@ -123,7 +123,7 @@ export function LoginForm({ children }: { children?: React.ReactNode }) {
   return (
     <CardContent className="space-y-5">
       <Suspense
-        fallback={<div className="p-6 text-center text-sm text-slate-400">Loading...</div>}
+        fallback={<div className="p-6 text-center text-base text-muted-foreground">Loading...</div>}
       >
         <PhoneLoginForm />
       </Suspense>
@@ -139,7 +139,7 @@ export function LoginForm({ children }: { children?: React.ReactNode }) {
           type="button"
           variant="ghost"
           onClick={() => setShowPassword(true)}
-          className="h-11 w-full text-base font-medium text-slate-600 hover:text-slate-900"
+          className="h-12 w-full text-base font-medium text-muted-foreground hover:text-foreground"
         >
           Ingia kwa barua pepe / Sign in with email
         </Button>

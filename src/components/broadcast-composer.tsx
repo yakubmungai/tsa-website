@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
+import { AlertTriangle, Copy, Eye, MessageCircle, PenLine } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Copy, MessageCircle, AlertTriangle } from 'lucide-react';
+import { SectionCard } from '@/components/portal/section-card';
+import { usePortalStrings } from '@/components/portal/use-portal-strings';
+import { cn } from '@/lib/utils';
 import {
   composeBroadcast,
   messageWarnings,
@@ -15,14 +16,10 @@ import {
   type BroadcastKind,
 } from '@/features/broadcast/templates';
 
-const KINDS: { value: BroadcastKind; sw: string; en: string }[] = [
-  { value: 'MSIBA', sw: 'Taarifa ya msiba', en: 'Bereavement notice' },
-  { value: 'PAYMENT_REMINDER', sw: 'Ukumbusho wa malipo', en: 'Payment reminder' },
-  { value: 'MONTHLY_STATEMENT', sw: 'Taarifa ya mwezi', en: 'Monthly statement' },
-  { value: 'GENERAL', sw: 'Taarifa ya kawaida', en: 'General announcement' },
-];
+const KINDS: BroadcastKind[] = ['MSIBA', 'PAYMENT_REMINDER', 'MONTHLY_STATEMENT', 'GENERAL'];
 
 export function BroadcastComposer({ siteUrl }: { siteUrl: string }) {
+  const t = usePortalStrings();
   const [kind, setKind] = useState<BroadcastKind>('MSIBA');
   const [fields, setFields] = useState<Record<string, string>>({});
 
@@ -38,138 +35,141 @@ export function BroadcastComposer({ siteUrl }: { siteUrl: string }) {
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(message);
-      toast.success('Copied. Paste it into the TSA WhatsApp group.');
+      toast.success(t.broadcast.copied);
     } catch {
-      toast.error('Could not copy. Select the text and copy it manually.');
+      toast.error(t.broadcast.copyFailed);
     }
   };
 
-  const field = (key: string, sw: string, en: string, placeholder = '') => (
-    <div className="space-y-1.5">
-      <Label htmlFor={key} className="text-sm font-semibold text-slate-700">
-        {sw} <span className="font-normal text-slate-500">{en}</span>
+  const labelClass = 'text-base font-semibold text-foreground';
+
+  const field = (key: string, label: string, placeholder = '') => (
+    <div className="space-y-2">
+      <Label htmlFor={key} className={labelClass}>
+        {label}
       </Label>
       <Input
         id={key}
         value={fields[key] ?? ''}
         onChange={set(key)}
         placeholder={placeholder}
-        className="h-11 text-base"
+        className="h-12 text-base"
       />
     </div>
   );
 
+  const f = t.broadcast.fields;
+
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle>Andaa ujumbe / Compose</CardTitle>
-          <CardDescription>
-            Nothing is sent from here. You copy the message and paste it into the group
-            yourself.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-2">
+      <SectionCard
+        title={t.broadcast.composeTitle}
+        description={t.broadcast.composeBody}
+        icon={<PenLine className="h-5 w-5 text-primary" aria-hidden />}
+        bodyClassName="space-y-5"
+      >
+        <fieldset className="space-y-2">
+          <legend className="mb-1 text-base font-semibold text-foreground">{t.broadcast.kindLabel}</legend>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {KINDS.map((option) => (
-              <Button
-                key={option.value}
+              <button
+                key={option}
                 type="button"
-                variant={kind === option.value ? 'default' : 'outline'}
-                onClick={() => setKind(option.value)}
-                className={`h-auto justify-start px-3 py-2 text-left ${
-                  kind === option.value ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''
-                }`}
+                onClick={() => setKind(option)}
+                aria-pressed={kind === option}
+                className={cn(
+                  'min-h-12 rounded-xl border-2 px-4 py-2 text-left text-base font-semibold transition-colors',
+                  kind === option
+                    ? 'border-primary bg-primary/10 text-foreground'
+                    : 'border-border/70 bg-card text-muted-foreground hover:border-primary/60'
+                )}
               >
-                <span className="flex flex-col">
-                  <span className="text-sm font-semibold">{option.sw}</span>
-                  <span className="text-xs font-normal opacity-80">{option.en}</span>
-                </span>
-              </Button>
+                {t.broadcast.kinds[option]}
+              </button>
             ))}
           </div>
+        </fieldset>
 
-          {kind === 'MSIBA' && (
-            <>
-              {field('subjectName', 'Jina la marehemu', 'Name of the deceased')}
-              {field('relation', 'Uhusiano', 'Relation', 'baba / father')}
-              {field('memberName', 'Mwanachama', 'Member')}
-              {field('amount', 'Mchango wa kila mmoja', "Each member's share", '$19.48')}
-              {field('deadline', 'Tarehe ya mwisho', 'Deadline', '3 September')}
-              {field('burialLocation', 'Mahali pa mazishi', 'Burial location')}
-              {field('burialDate', 'Tarehe ya mazishi', 'Burial date')}
-            </>
-          )}
+        {kind === 'MSIBA' && (
+          <>
+            {field('subjectName', f.subjectName)}
+            {field('relation', f.relation, t.broadcast.relationPlaceholder)}
+            {field('memberName', f.memberName)}
+            {field('amount', f.share, '$19.48')}
+            {field('deadline', f.deadline, t.broadcast.deadlinePlaceholder)}
+            {field('burialLocation', f.burialLocation)}
+            {field('burialDate', f.burialDate)}
+          </>
+        )}
 
-          {kind === 'PAYMENT_REMINDER' && (
-            <>
-              {field('amount', 'Kiasi', 'Amount', '$25.00')}
-              {field('deadline', 'Tarehe ya mwisho', 'Deadline')}
-            </>
-          )}
+        {kind === 'PAYMENT_REMINDER' && (
+          <>
+            {field('amount', f.amount, '$25.00')}
+            {field('deadline', f.deadline)}
+          </>
+        )}
 
-          {kind === 'GENERAL' && (
-            <>
-              <div className="space-y-1.5">
-                <Label htmlFor="bodySw" className="text-sm font-semibold text-slate-700">
-                  Ujumbe kwa Kiswahili <span className="font-normal text-slate-500">Swahili</span>
-                </Label>
-                <Textarea id="bodySw" value={fields.bodySw ?? ''} onChange={set('bodySw')} rows={4} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="bodyEn" className="text-sm font-semibold text-slate-700">
-                  Ujumbe kwa Kiingereza <span className="font-normal text-slate-500">English</span>
-                </Label>
-                <Textarea id="bodyEn" value={fields.bodyEn ?? ''} onChange={set('bodyEn')} rows={4} />
-              </div>
-            </>
-          )}
-
-          {field('link', 'Kiungo', 'Link', `${siteUrl}/portal`)}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Hakiki / Preview</CardTitle>
-          <CardDescription>
-            {message.length} characters. Swahili first, English below.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {warnings.length > 0 && (
-            <div className="rounded-lg border border-amber-300 bg-amber-50 p-3">
-              {warnings.map((warning) => (
-                <p key={warning} className="flex gap-2 text-sm text-amber-900">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                  {warning}
-                </p>
-              ))}
+        {kind === 'GENERAL' && (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="bodySw" className={labelClass}>
+                {f.bodySw}
+              </Label>
+              <Textarea id="bodySw" value={fields.bodySw ?? ''} onChange={set('bodySw')} rows={4} className="text-base" />
             </div>
-          )}
+            <div className="space-y-2">
+              <Label htmlFor="bodyEn" className={labelClass}>
+                {f.bodyEn}
+              </Label>
+              <Textarea id="bodyEn" value={fields.bodyEn ?? ''} onChange={set('bodyEn')} rows={4} className="text-base" />
+            </div>
+          </>
+        )}
 
-          <pre className="max-h-[28rem] overflow-auto whitespace-pre-wrap rounded-lg bg-slate-900 p-4 font-sans text-sm leading-relaxed text-slate-100">
-            {message}
-          </pre>
+        {field('link', f.link, `${siteUrl}/portal`)}
+      </SectionCard>
 
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              onClick={handleCopy}
-              className="h-12 flex-1 gap-2 bg-emerald-600 text-base font-semibold text-white hover:bg-emerald-700"
-            >
-              <Copy className="h-4 w-4" />
-              Nakili / Copy
-            </Button>
-            <Button asChild variant="outline" className="h-12 flex-1 gap-2 text-base font-semibold">
-              <a href={whatsappShareUrl(message)} target="_blank" rel="noopener noreferrer">
-                <MessageCircle className="h-4 w-4" />
-                Fungua WhatsApp
-              </a>
-            </Button>
+      <SectionCard
+        title={t.broadcast.previewTitle}
+        description={t.broadcast.previewBody(message.length)}
+        icon={<Eye className="h-5 w-5 text-primary" aria-hidden />}
+        bodyClassName="space-y-4"
+      >
+        {warnings.length > 0 && (
+          <div className="space-y-2 rounded-2xl border-2 border-warning/40 bg-warning/10 p-4">
+            {warnings.map((warning) => (
+              <p key={warning} className="flex gap-2 text-base text-foreground">
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" aria-hidden />
+                {warning}
+              </p>
+            ))}
           </div>
-        </CardContent>
-      </Card>
+        )}
+
+        <pre className="max-h-[28rem] overflow-auto whitespace-pre-wrap break-words rounded-2xl border border-border/60 bg-muted p-4 font-sans text-base leading-relaxed text-foreground">
+          {message}
+        </pre>
+
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={handleCopy}
+            className="btn-shimmer inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl px-4 text-lg font-bold text-primary-foreground"
+          >
+            <Copy className="h-5 w-5" aria-hidden />
+            {t.broadcast.copy}
+          </button>
+          <a
+            href={whatsappShareUrl(message)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-primary px-4 text-lg font-bold text-primary transition-colors hover:bg-primary/5"
+          >
+            <MessageCircle className="h-5 w-5" aria-hidden />
+            {t.broadcast.openWhatsapp}
+          </a>
+        </div>
+      </SectionCard>
     </div>
   );
 }

@@ -1,29 +1,47 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import {
+  AlertTriangle,
+  Calendar,
+  Check,
+  CheckCircle2,
+  Clock,
+  FileText,
+  Inbox,
+  Loader2,
+  User,
+  UserPlus,
+  X,
+  XCircle,
+} from 'lucide-react';
+import { toast } from 'sonner';
 import {
   approveSubmission,
   rejectSubmission,
   getSubmissionDuplicates,
 } from '@/features/membership/admin-actions';
 import type { DuplicateCandidate } from '@/features/forms/promote';
-import { toast } from 'sonner';
-import { Check, X, FileText, Calendar, User, UserPlus, AlertTriangle } from 'lucide-react';
+import { useLanguage } from '@/components/language-context';
+import { SectionCard } from '@/components/portal/section-card';
+import { StatusBadge, type Tone } from '@/components/portal/status-badge';
+import { EmptyState } from '@/components/portal/empty-state';
+import { usePortalStrings } from '@/components/portal/use-portal-strings';
 
 interface Submission {
   id: string;
   memberId: string | null;
   formType: string;
   status: 'PENDING' | 'PROCESSING' | 'APPROVED' | 'REJECTED';
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: any;
   createdAt: Date;
   memberNames?: string;
 }
 
 export function AdminSubmissionsList({ initialSubmissions }: { initialSubmissions: Submission[] }) {
+  const t = usePortalStrings();
+  const { language } = useLanguage();
   const [submissions, setSubmissions] = useState<Submission[]>(initialSubmissions);
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
@@ -45,7 +63,7 @@ export function AdminSubmissionsList({ initialSubmissions }: { initialSubmission
         const found = await getSubmissionDuplicates({ submissionId: id });
         if (found.success && found.data.candidates.length > 0) {
           setDuplicates((prev) => ({ ...prev, [id]: found.data.candidates }));
-          toast.warning('This may already be an existing member — choose below.');
+          toast.warning(t.adminForms.maybeMemberToast);
           return;
         }
         setDuplicates((prev) => ({ ...prev, [id]: [] }));
@@ -58,13 +76,13 @@ export function AdminSubmissionsList({ initialSubmissions }: { initialSubmission
 
       const res = await approveSubmission({ submissionId: id, resolution });
       if (res.success) {
-        toast.success('Submission approved.');
+        toast.success(t.adminForms.approvedToast);
         settle(id, 'APPROVED');
       } else {
         toast.error(res.error);
       }
     } catch {
-      toast.error('An error occurred.');
+      toast.error(t.common.somethingWrong);
     } finally {
       setLoadingId(null);
     }
@@ -78,13 +96,13 @@ export function AdminSubmissionsList({ initialSubmissions }: { initialSubmission
         resolution: { action: 'linkExisting', memberId },
       });
       if (res.success) {
-        toast.success(`Linked to ${name}.`);
+        toast.success(t.adminForms.linkedTo(name));
         settle(id, 'APPROVED');
       } else {
         toast.error(res.error);
       }
     } catch {
-      toast.error('An error occurred.');
+      toast.error(t.common.somethingWrong);
     } finally {
       setLoadingId(null);
     }
@@ -98,13 +116,13 @@ export function AdminSubmissionsList({ initialSubmissions }: { initialSubmission
         resolution: { action: 'createMember' },
       });
       if (res.success) {
-        toast.success('New member created.');
+        toast.success(t.adminForms.memberCreated);
         settle(id, 'APPROVED');
       } else {
         toast.error(res.error);
       }
     } catch {
-      toast.error('An error occurred.');
+      toast.error(t.common.somethingWrong);
     } finally {
       setLoadingId(null);
     }
@@ -115,187 +133,194 @@ export function AdminSubmissionsList({ initialSubmissions }: { initialSubmission
     try {
       const res = await rejectSubmission({ submissionId: id });
       if (res.success) {
-        toast.success('Submission rejected.');
+        toast.success(t.adminForms.rejectedToast);
         settle(id, 'REJECTED');
       } else {
         toast.error(res.error);
       }
     } catch {
-      toast.error('An error occurred.');
+      toast.error(t.common.somethingWrong);
     } finally {
       setLoadingId(null);
     }
   };
 
-  const pendingList = submissions.filter(s => s.status === 'PENDING');
-  const processedList = submissions.filter(s => s.status !== 'PENDING');
+  const dateFmt = new Intl.DateTimeFormat(language === 'sw' ? 'sw-TZ' : 'en-US', {
+    dateStyle: 'medium',
+    timeZone: 'America/Chicago',
+  });
+  const formLabel = (type: string) =>
+    t.adminForms.types[type as keyof typeof t.adminForms.types] ?? type;
+  const applicantName = (sub: Submission, fallback: string) =>
+    sub.memberNames || `${sub.data.firstName || ''} ${sub.data.lastName || fallback}`.trim();
+
+  const STATUS: Record<Submission['status'], { tone: Tone; label: string; icon: React.ReactNode }> = {
+    PENDING: { tone: 'warning', label: t.adminForms.status.PENDING, icon: <Clock className="h-3.5 w-3.5" aria-hidden /> },
+    PROCESSING: { tone: 'info', label: t.adminForms.status.PROCESSING, icon: <Loader2 className="h-3.5 w-3.5" aria-hidden /> },
+    APPROVED: { tone: 'success', label: t.adminForms.status.APPROVED, icon: <CheckCircle2 className="h-3.5 w-3.5" aria-hidden /> },
+    REJECTED: { tone: 'danger', label: t.adminForms.status.REJECTED, icon: <XCircle className="h-3.5 w-3.5" aria-hidden /> },
+  };
+
+  const pendingList = submissions.filter((s) => s.status === 'PENDING');
+  const processedList = submissions.filter((s) => s.status !== 'PENDING');
 
   return (
-    <div className="space-y-8">
-      {/* Pending Queue */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-          <UserPlus className="h-5 w-5 text-amber-500" />
-          Pending Approvals Queue ({pendingList.length})
+    <div className="space-y-10">
+      {/* Pending queue */}
+      <section className="space-y-4" aria-labelledby="pending-heading">
+        <h2 id="pending-heading" className="flex items-center gap-2 font-serif text-2xl font-bold text-foreground">
+          <UserPlus className="h-6 w-6 text-warning" aria-hidden />
+          {t.adminForms.pendingTitle}
+          <span className="rounded-full bg-warning/15 px-2.5 py-0.5 font-sans text-base font-bold text-warning">
+            {pendingList.length}
+          </span>
         </h2>
 
         {pendingList.length === 0 ? (
-          <Card className="text-center py-10 bg-white border border-slate-100">
-            <CardContent className="text-slate-400 text-sm">
-              All caught up! No pending submissions to review.
-            </CardContent>
-          </Card>
+          <SectionCard>
+            <EmptyState
+              icon={<Inbox className="h-6 w-6" aria-hidden />}
+              title={t.adminForms.pendingEmpty}
+            />
+          </SectionCard>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {pendingList.map((sub) => (
-              <Card key={sub.id} className="bg-white border border-slate-100 shadow-md flex flex-col justify-between">
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-center">
-                    <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-wider px-2">
-                      {sub.formType}
-                    </Badge>
-                    <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {new Date(sub.createdAt).toLocaleDateString()}
+              <article
+                key={sub.id}
+                className="flex flex-col rounded-3xl border border-border/60 bg-card shadow-sm"
+              >
+                <div className="space-y-3 px-5 pt-5 sm:px-6">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <StatusBadge tone="info" icon={<FileText className="h-3.5 w-3.5" aria-hidden />}>
+                      {formLabel(sub.formType)}
+                    </StatusBadge>
+                    <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4" aria-hidden />
+                      {dateFmt.format(new Date(sub.createdAt))}
                     </span>
                   </div>
-                  <CardTitle className="text-md font-bold text-slate-900 pt-2 flex items-center gap-1.5">
-                    <User className="h-4 w-4 text-slate-400" />
-                    {sub.memberNames || `${sub.data.firstName || ''} ${sub.data.lastName || 'Guest Application'}`}
-                  </CardTitle>
-                </CardHeader>
-                
-                <CardContent className="space-y-3 pb-4">
-                  <div className="bg-slate-50 rounded-lg p-3 max-h-48 overflow-y-auto border border-slate-100 text-xs text-slate-600 font-mono space-y-1">
-                    {Object.entries(sub.data).map(([key, val]: any) => {
+                  <h3 className="flex items-center gap-2 break-words font-serif text-xl font-bold text-foreground">
+                    <User className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
+                    {applicantName(sub, t.adminForms.guestApplication)}
+                  </h3>
+                </div>
+
+                <div className="px-5 py-4 sm:px-6">
+                  <dl className="max-h-56 space-y-1.5 overflow-y-auto rounded-2xl border border-border/60 bg-muted/50 p-4 text-sm">
+                    {Object.entries(sub.data).map(([key, val]) => {
                       if (typeof val === 'object') return null; // skip sub-objects for neatness
                       return (
-                        <div key={key} className="flex gap-2">
-                          <span className="font-bold text-slate-500 w-24 truncate">{key}:</span>
-                          <span className="text-slate-800">{String(val)}</span>
+                        <div key={key} className="grid grid-cols-[minmax(0,8rem)_1fr] gap-3">
+                          <dt className="truncate font-semibold text-muted-foreground">{key}</dt>
+                          <dd className="break-words text-foreground">{String(val)}</dd>
                         </div>
                       );
                     })}
-                  </div>
-                </CardContent>
+                  </dl>
+                </div>
 
                 {duplicates[sub.id]?.length ? (
-                  <div className="mx-6 mb-4 rounded-lg border-2 border-amber-300 bg-amber-50 p-4">
-                    <p className="flex items-center gap-2 text-sm font-bold text-amber-900">
-                      <AlertTriangle className="h-4 w-4" aria-hidden />
-                      This may already be a member
+                  <div className="mx-5 mb-4 rounded-2xl border-2 border-warning/40 bg-warning/10 p-4 sm:mx-6">
+                    <p className="flex items-center gap-2 text-base font-bold text-foreground">
+                      <AlertTriangle className="h-5 w-5 text-warning" aria-hidden />
+                      {t.adminForms.maybeMember}
                     </p>
-                    <p className="mt-1 text-sm text-amber-800">
-                      Link the application to the right person, or create a new member if none
-                      of these is them.
-                    </p>
+                    <p className="mt-1 text-base text-muted-foreground">{t.adminForms.maybeMemberBody}</p>
                     <div className="mt-3 grid gap-2">
                       {duplicates[sub.id].map((candidate) => (
-                        <Button
+                        <button
                           key={candidate.id}
-                          variant="outline"
+                          type="button"
                           disabled={loadingId !== null}
-                          onClick={() =>
-                            handleLinkExisting(sub.id, candidate.id, candidate.names)
-                          }
-                          className="h-auto w-full justify-start bg-white px-3 py-2 text-left"
+                          onClick={() => handleLinkExisting(sub.id, candidate.id, candidate.names)}
+                          className="flex min-h-12 w-full flex-col items-start gap-0.5 rounded-xl border-2 border-border/70 bg-card px-4 py-2 text-left transition-colors hover:border-primary hover:bg-primary/5 disabled:opacity-50"
                         >
-                          <span className="flex flex-col gap-0.5">
-                            <span className="text-sm font-semibold text-slate-900">
-                              {candidate.names}
-                            </span>
-                            <span className="text-xs font-normal text-slate-600">
-                              {candidate.phone ?? 'no phone on file'} &middot; matched on{' '}
-                              {candidate.reason}
-                            </span>
+                          <span className="text-base font-semibold text-foreground">{candidate.names}</span>
+                          <span className="text-sm text-muted-foreground">
+                            {candidate.phone ?? t.adminForms.noPhone} &middot;{' '}
+                            {t.adminForms.matchedOn(t.adminForms.matchReason[candidate.reason])}
                           </span>
-                        </Button>
+                        </button>
                       ))}
                     </div>
-                    <Button
-                      variant="ghost"
+                    <button
+                      type="button"
                       disabled={loadingId !== null}
                       onClick={() => handleCreateAnyway(sub.id)}
-                      className="mt-2 h-9 w-full text-sm font-semibold text-amber-900 hover:bg-amber-100"
+                      className="mt-2 inline-flex min-h-12 w-full items-center justify-center rounded-xl px-3 text-base font-semibold text-foreground transition-colors hover:bg-warning/15 disabled:opacity-50"
                     >
-                      None of these — create a new member
-                    </Button>
+                      {t.adminForms.createAnyway}
+                    </button>
                   </div>
                 ) : null}
 
-                <div className="px-6 pb-6 pt-2 border-t border-slate-100 flex gap-2">
-                  <Button
+                <div className="mt-auto flex flex-col gap-2 border-t border-border/60 px-5 py-4 sm:flex-row sm:px-6">
+                  <button
+                    type="button"
                     onClick={() => handleApprove(sub)}
                     disabled={loadingId !== null}
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold h-9"
+                    className="btn-shimmer inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl text-base font-bold text-primary-foreground disabled:opacity-60"
                   >
-                    <Check className="mr-1 h-4 w-4" /> Approve
-                  </Button>
-                  <Button
+                    <Check className="h-5 w-5" aria-hidden />
+                    {loadingId === sub.id ? t.common.loading : t.adminForms.approve}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => handleReject(sub.id)}
                     disabled={loadingId !== null}
-                    variant="outline"
-                    className="flex-1 border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 text-xs font-semibold h-9"
+                    className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-destructive/40 bg-card text-base font-semibold text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-60"
                   >
-                    <X className="mr-1 h-4 w-4" /> Reject
-                  </Button>
+                    <X className="h-5 w-5" aria-hidden />
+                    {t.adminForms.reject}
+                  </button>
                 </div>
-              </Card>
+              </article>
             ))}
           </div>
         )}
-      </div>
+      </section>
 
-      {/* History Log */}
-      <div className="space-y-4 pt-4">
-        <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-          <FileText className="h-5 w-5 text-slate-400" />
-          Processed Submissions History ({processedList.length})
-        </h2>
-
+      {/* History */}
+      <SectionCard
+        title={
+          <>
+            {t.adminForms.processedTitle}
+            <span className="font-sans text-base font-semibold text-muted-foreground">
+              ({processedList.length})
+            </span>
+          </>
+        }
+        icon={<FileText className="h-5 w-5 text-muted-foreground" aria-hidden />}
+      >
         {processedList.length === 0 ? (
-          <Card className="text-center py-8 bg-white border border-slate-100">
-            <CardContent className="text-slate-400 text-sm">
-              No historical submissions found.
-            </CardContent>
-          </Card>
+          <EmptyState title={t.adminForms.processedEmpty} className="py-6" />
         ) : (
-          <Card className="bg-white border border-slate-100 shadow">
-            <CardContent className="p-0">
-              <div className="divide-y divide-slate-100">
-                {processedList.map((sub) => (
-                  <div key={sub.id} className="p-4 flex justify-between items-center">
-                    <div className="space-y-1">
-                      <p className="text-sm font-semibold text-slate-800">
-                        {sub.memberNames || `${sub.data.firstName || ''} ${sub.data.lastName || 'Guest'}`}
-                      </p>
-                      <div className="flex gap-2 items-center text-xs">
-                        <Badge variant="outline" className="text-[10px] uppercase font-semibold">
-                          {sub.formType}
-                        </Badge>
-                        <span className="text-slate-400">
-                          {new Date(sub.createdAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                    <div>
-                      {sub.status === 'APPROVED' ? (
-                        <Badge className="bg-emerald-100 text-emerald-800 border-none font-semibold text-xs">
-                          APPROVED
-                        </Badge>
-                      ) : (
-                        <Badge className="bg-rose-100 text-rose-800 border-none font-semibold text-xs">
-                          REJECTED
-                        </Badge>
-                      )}
-                    </div>
+          <ul className="divide-y divide-border/60">
+            {processedList.map((sub) => {
+              const status = STATUS[sub.status];
+              return (
+                <li
+                  key={sub.id}
+                  className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0 space-y-1">
+                    <p className="break-words text-base font-semibold text-foreground">
+                      {applicantName(sub, t.adminForms.guest)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {formLabel(sub.formType)} · {dateFmt.format(new Date(sub.createdAt))}
+                    </p>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  <StatusBadge tone={status.tone} icon={status.icon} className="self-start sm:self-auto">
+                    {status.label}
+                  </StatusBadge>
+                </li>
+              );
+            })}
+          </ul>
         )}
-      </div>
+      </SectionCard>
     </div>
   );
 }

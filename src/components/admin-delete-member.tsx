@@ -13,11 +13,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Archive } from 'lucide-react';
 import { archiveMember } from '@/features/membership/admin-actions';
+import { usePortalStrings } from '@/components/portal/use-portal-strings';
 import { toast } from 'sonner';
 
 interface ArchiveMemberProps {
@@ -26,6 +26,7 @@ interface ArchiveMemberProps {
 }
 
 export function AdminDeleteMember({ memberId, memberNames }: ArchiveMemberProps) {
+  const t = usePortalStrings();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [confirmName, setConfirmName] = useState('');
@@ -39,7 +40,7 @@ export function AdminDeleteMember({ memberId, memberNames }: ArchiveMemberProps)
     try {
       const res = await archiveMember({ memberId, confirmName });
       if (res.success) {
-        toast.success(`${memberNames} has been archived.`);
+        toast.success(t.memberForm.archived(memberNames));
         setOpen(false);
         router.push('/admin/members');
         router.refresh();
@@ -47,7 +48,7 @@ export function AdminDeleteMember({ memberId, memberNames }: ArchiveMemberProps)
         toast.error(res.error);
       }
     } catch {
-      toast.error('An error occurred while archiving.');
+      toast.error(t.memberForm.archiveFailed);
     } finally {
       setLoading(false);
     }
@@ -62,35 +63,29 @@ export function AdminDeleteMember({ memberId, memberNames }: ArchiveMemberProps)
       }}
     >
       <AlertDialogTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="font-semibold text-xs text-amber-700 border-slate-200 hover:bg-amber-50 hover:text-amber-800 gap-1.5"
+        <button
+          type="button"
+          className="inline-flex min-h-12 items-center gap-2 rounded-xl border-2 border-warning/40 bg-card px-4 text-base font-semibold text-warning transition-colors hover:bg-warning/10"
         >
-          <Archive className="h-3.5 w-3.5" />
-          Archive Profile
-        </Button>
+          <Archive className="h-5 w-5" aria-hidden />
+          {t.memberForm.archiveButton}
+        </button>
       </AlertDialogTrigger>
-      <AlertDialogContent className="font-sans">
+      <AlertDialogContent className="rounded-3xl font-sans sm:max-w-md">
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-lg font-bold text-slate-900">
-            Archive {memberNames}?
+          <AlertDialogTitle className="font-serif text-2xl font-bold text-foreground">
+            {t.memberForm.archiveTitle(memberNames)}
           </AlertDialogTitle>
-          <AlertDialogDescription className="text-sm text-slate-600 space-y-2">
-            <span className="block">
-              They will be hidden from the member directory and their login will be
-              removed.
-            </span>
-            <span className="block">
-              Their transaction and financial history is <strong>kept</strong>, as the
-              constitution requires, and an administrator can restore them later.
-            </span>
+          <AlertDialogDescription className="space-y-2 text-base text-muted-foreground">
+            <span className="block">{t.memberForm.archiveBody}</span>
+            <span className="block">{t.memberForm.archiveKept}</span>
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <div className="space-y-2 py-2">
-          <Label htmlFor="confirm-name" className="text-sm text-slate-700">
-            Type <strong className="text-slate-900">{memberNames}</strong> to confirm
+          <Label htmlFor="confirm-name" className="text-base text-foreground">
+            {t.memberForm.archiveConfirm}{' '}
+            <strong className="font-bold">{memberNames}</strong>
           </Label>
           <Input
             id="confirm-name"
@@ -99,20 +94,23 @@ export function AdminDeleteMember({ memberId, memberNames }: ArchiveMemberProps)
             placeholder={memberNames}
             autoComplete="off"
             disabled={loading}
+            className="h-12 text-base"
           />
         </div>
 
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+        <AlertDialogFooter className="gap-2">
+          <AlertDialogCancel disabled={loading} className="min-h-12 rounded-xl px-5 text-base font-semibold">
+            {t.common.cancel}
+          </AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault();
               handleArchive();
             }}
             disabled={loading || !nameMatches}
-            className="bg-amber-600 hover:bg-amber-700 text-white font-medium disabled:opacity-50"
+            className="min-h-12 rounded-xl bg-warning px-5 text-base font-bold text-warning-foreground hover:bg-warning/90 disabled:opacity-50"
           >
-            {loading ? 'Archiving...' : 'Archive Member'}
+            {loading ? t.memberForm.archiving : t.memberForm.archiveSubmit}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

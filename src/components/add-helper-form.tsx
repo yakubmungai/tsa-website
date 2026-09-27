@@ -3,23 +3,20 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Info, UserPlus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { UserPlus } from 'lucide-react';
+import { SectionCard } from '@/components/portal/section-card';
+import { usePortalStrings } from '@/components/portal/use-portal-strings';
 import { requestDelegation, approveDelegation } from '@/features/delegation/actions';
+import { cn } from '@/lib/utils';
 
-const PERMISSIONS = [
-  { value: 'VIEW_FINANCES', sw: 'Kuona salio langu', en: 'See my balance and statements' },
-  { value: 'MAKE_PAYMENTS', sw: 'Kulipa kwa niaba yangu', en: 'Pay on my behalf' },
-  { value: 'SUBMIT_FORMS', sw: 'Kujaza fomu kwa niaba yangu', en: 'Submit forms for me' },
-  { value: 'EDIT_PROFILE', sw: 'Kubadilisha taarifa zangu', en: 'Update my details' },
-] as const;
+const PERMISSIONS = ['VIEW_FINANCES', 'MAKE_PAYMENTS', 'SUBMIT_FORMS', 'EDIT_PROFILE'] as const;
 
 export function AddHelperForm() {
+  const t = usePortalStrings();
   const router = useRouter();
   const [step, setStep] = useState<'form' | 'confirm'>('form');
   const [loading, setLoading] = useState(false);
@@ -57,7 +54,7 @@ export function AddHelperForm() {
       setDemoCode(res.data.demoCode ?? null);
       setStep('confirm');
     } catch {
-      toast.error('Something went wrong. Please try again.');
+      toast.error(t.common.somethingWrong);
     } finally {
       setLoading(false);
     }
@@ -73,7 +70,7 @@ export function AddHelperForm() {
         setCode('');
         return;
       }
-      toast.success(`${name} can now help with your account.`);
+      toast.success(t.helpers.added(name));
       setStep('form');
       setName('');
       setPhone('');
@@ -82,132 +79,123 @@ export function AddHelperForm() {
       setCode('');
       router.refresh();
     } catch {
-      toast.error('Something went wrong. Please try again.');
+      toast.error(t.common.somethingWrong);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <UserPlus className="h-5 w-5 text-emerald-700" aria-hidden />
-          Ongeza msaidizi
-          <span className="text-base font-normal text-slate-500">Add a helper</span>
-        </CardTitle>
-        <CardDescription className="text-base">
-          Mtu unayemwamini anaweza kukusaidia na akaunti yako.
-          <span className="mt-1 block text-slate-500">
-            Someone you trust can help you with your account. We will send a code to your
-            phone to confirm.
-          </span>
-        </CardDescription>
-      </CardHeader>
+    <SectionCard
+      title={t.helpers.addTitle}
+      description={t.helpers.addBody}
+      icon={<UserPlus className="h-5 w-5 text-primary" aria-hidden />}
+    >
+      {step === 'form' ? (
+        <form onSubmit={handleRequest} className="space-y-5">
+          <div className="space-y-2">
+            <Label htmlFor="helper-name" className="text-base font-semibold text-foreground">
+              {t.helpers.name}
+            </Label>
+            <Input
+              id="helper-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="h-12 text-lg"
+              autoComplete="off"
+              required
+              disabled={loading}
+            />
+          </div>
 
-      <CardContent>
-        {step === 'form' ? (
-          <form onSubmit={handleRequest} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="helper-name" className="text-base font-semibold text-slate-800">
-                Jina lake / Their name
-              </Label>
-              <Input
-                id="helper-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="h-12 text-base"
-                required
-                disabled={loading}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="helper-phone" className="text-base font-semibold text-foreground">
+              {t.helpers.phone}
+            </Label>
+            <Input
+              id="helper-phone"
+              type="tel"
+              inputMode="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="(713) 555-0100"
+              className="h-12 text-lg"
+              required
+              disabled={loading}
+            />
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="helper-phone" className="text-base font-semibold text-slate-800">
-                Namba yake ya simu / Their phone number
-              </Label>
-              <Input
-                id="helper-phone"
-                type="tel"
-                inputMode="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="(713) 555-0100"
-                className="h-12 text-base"
-                required
-                disabled={loading}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="helper-rel" className="text-base font-semibold text-foreground">
+              {t.helpers.relationship}
+              <span className="ml-2 font-normal text-muted-foreground">({t.common.optional})</span>
+            </Label>
+            <Input
+              id="helper-rel"
+              value={relationship}
+              onChange={(e) => setRelationship(e.target.value)}
+              placeholder={t.helpers.relationshipPlaceholder}
+              className="h-12 text-lg"
+              disabled={loading}
+            />
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="helper-rel" className="text-base font-semibold text-slate-800">
-                Uhusiano / Relationship
-                <span className="ml-2 text-sm font-normal text-slate-500">optional</span>
-              </Label>
-              <Input
-                id="helper-rel"
-                value={relationship}
-                onChange={(e) => setRelationship(e.target.value)}
-                placeholder="binti / daughter"
-                className="h-12 text-base"
-                disabled={loading}
-              />
-            </div>
-
-            <fieldset className="space-y-3">
-              <legend className="text-base font-semibold text-slate-800">
-                Wanaweza kufanya nini? / What can they do?
-              </legend>
-              {PERMISSIONS.map((permission) => (
+          <fieldset className="space-y-3">
+            <legend className="mb-1 text-base font-semibold text-foreground">
+              {t.helpers.whatCanTheyDo}
+            </legend>
+            {PERMISSIONS.map((permission) => {
+              const checked = permissions.includes(permission);
+              return (
                 <label
-                  key={permission.value}
-                  className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 p-3"
+                  key={permission}
+                  className={cn(
+                    'flex min-h-12 cursor-pointer items-center gap-4 rounded-2xl border-2 px-4 py-3 transition-colors',
+                    checked
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border/70 bg-card hover:border-primary/60'
+                  )}
                 >
                   <Checkbox
-                    checked={permissions.includes(permission.value)}
-                    onCheckedChange={() => toggle(permission.value)}
+                    checked={checked}
+                    onCheckedChange={() => toggle(permission)}
                     disabled={loading}
-                    className="mt-1"
+                    className="h-6 w-6"
                   />
-                  <span>
-                    <span className="block text-base font-medium text-slate-900">
-                      {permission.sw}
-                    </span>
-                    <span className="block text-sm text-slate-600">{permission.en}</span>
+                  <span className="text-base font-medium text-foreground">
+                    {t.helpers.permissionChoices[permission]}
                   </span>
                 </label>
-              ))}
-            </fieldset>
+              );
+            })}
+          </fieldset>
 
-            <Button
-              type="submit"
-              disabled={loading || permissions.length === 0}
-              className="h-12 w-full bg-emerald-600 text-base font-semibold text-white hover:bg-emerald-700"
-            >
-              {loading ? 'Inatuma...' : 'Endelea / Continue'}
-            </Button>
-          </form>
-        ) : (
-          <div className="space-y-4">
-            <p className="text-base text-slate-700">
-              Tumekutumia namba ya uthibitisho kwenye simu yako.
-              <span className="mt-1 block text-slate-500">
-                We sent a code to your own phone — not to {name}&rsquo;s — so only you can
-                approve this.
-              </span>
-            </p>
+          <button
+            type="submit"
+            disabled={loading || permissions.length === 0}
+            className="btn-shimmer inline-flex min-h-12 w-full items-center justify-center rounded-xl text-lg font-bold text-primary-foreground disabled:opacity-60"
+          >
+            {loading ? t.helpers.sending : t.common.next}
+          </button>
+        </form>
+      ) : (
+        <div className="space-y-5">
+          <p className="text-base text-foreground">{t.helpers.codeSent(name)}</p>
 
-            {demoCode ? (
-              <div className="rounded-lg border-2 border-amber-300 bg-amber-50 px-4 py-3">
-                <p className="text-sm font-bold text-amber-900">
-                  Hakuna ujumbe uliotumwa / No message was sent
-                </p>
-                <p className="mt-1 font-mono text-2xl font-bold tracking-[0.3em] text-amber-950">
-                  {demoCode}
-                </p>
-              </div>
-            ) : null}
+          {demoCode ? (
+            <div className="rounded-2xl border-2 border-warning/40 bg-warning/10 px-4 py-3">
+              <p className="flex items-center gap-2 text-base font-semibold text-foreground">
+                <Info className="h-5 w-5 shrink-0 text-warning" aria-hidden />
+                {t.helpers.demoNoMessage}
+              </p>
+              <p className="mt-1 font-mono text-2xl font-bold tracking-[0.3em] text-foreground">
+                {demoCode}
+              </p>
+            </div>
+          ) : null}
 
+          <div className="space-y-2">
+            <p className="text-center text-base font-semibold text-foreground">{t.helpers.codeLabel}</p>
             <div className="flex justify-center py-1">
               <InputOTP
                 maxLength={6}
@@ -220,24 +208,23 @@ export function AddHelperForm() {
               >
                 <InputOTPGroup>
                   {[0, 1, 2, 3, 4, 5].map((i) => (
-                    <InputOTPSlot key={i} index={i} className="h-14 w-12 text-xl" />
+                    <InputOTPSlot key={i} index={i} className="h-14 w-11 text-xl sm:w-12" />
                   ))}
                 </InputOTPGroup>
               </InputOTP>
             </div>
-
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setStep('form')}
-              disabled={loading}
-              className="h-11 w-full text-base"
-            >
-              Ghairi / Cancel
-            </Button>
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          <button
+            type="button"
+            onClick={() => setStep('form')}
+            disabled={loading}
+            className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-border bg-card text-base font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-60"
+          >
+            {t.common.cancel}
+          </button>
+        </div>
+      )}
+    </SectionCard>
   );
 }

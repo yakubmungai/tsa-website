@@ -11,6 +11,8 @@ export interface TranslationSchema {
     contact: string;
     joinUs: string;
     switchTo: string;
+    dashboard: string;
+    logout: string;
   };
   hero: {
     badge: string;
@@ -301,6 +303,8 @@ export const translations: Record<Language, TranslationSchema> = {
       contact: "Contact",
       joinUs: "Become a Member",
       switchTo: "SW",
+      dashboard: "My account",
+      logout: "Sign out",
     },
     hero: {
       badge: "Tanzanian Diaspora Mutual-Aid Society",
@@ -652,6 +656,8 @@ export const translations: Record<Language, TranslationSchema> = {
       contact: "Wasiliana",
       joinUs: "Kuwa Mwanachama",
       switchTo: "EN",
+      dashboard: "Akaunti yangu",
+      logout: "Toka",
     },
     hero: {
       badge: "Jumuiya ya Kusaidiana ya Watanzania Marekani",

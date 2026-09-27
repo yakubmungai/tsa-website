@@ -4,8 +4,10 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
-import { Users } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { UserRound, Users } from 'lucide-react';
+import { SectionCard } from '@/components/portal/section-card';
+import { ChoiceButton } from '@/components/portal/choice-button';
+import { usePortalStrings } from '@/components/portal/use-portal-strings';
 import { startActingAs } from '@/features/delegation/actions';
 
 export interface SwitchableAccount {
@@ -22,6 +24,7 @@ export interface SwitchableAccount {
  * request, so revoking access takes effect immediately.
  */
 export function AccountSwitcher({ accounts }: { accounts: SwitchableAccount[] }) {
+  const t = usePortalStrings();
   const router = useRouter();
   const { update } = useSession();
   const [loading, setLoading] = useState<string | null>(null);
@@ -40,39 +43,29 @@ export function AccountSwitcher({ accounts }: { accounts: SwitchableAccount[] })
       router.push('/portal');
       router.refresh();
     } catch {
-      toast.error('Could not switch account. Please try again.');
+      toast.error(t.helpers.switchFailed);
     } finally {
       setLoading(null);
     }
   };
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900">
-        <Users className="h-5 w-5 text-emerald-700" aria-hidden />
-        Ninawasaidia
-        <span className="text-base font-normal text-slate-500">People I help</span>
-      </h2>
-      <p className="mt-1 text-base text-slate-600">
-        Unaweza kuangalia akaunti zao na kuwasaidia.
-        <span className="ml-1 text-slate-500">You can view and help with their accounts.</span>
-      </p>
-
-      <div className="mt-4 grid gap-2">
+    <SectionCard
+      title={t.helpers.switcherTitle}
+      description={t.helpers.switcherBody}
+      icon={<Users className="h-5 w-5 text-primary" aria-hidden />}
+    >
+      <div className="grid gap-3">
         {accounts.map((account) => (
-          <Button
+          <ChoiceButton
             key={account.delegationId}
-            variant="outline"
             disabled={loading !== null}
             onClick={() => handleSwitch(account)}
-            className="h-auto w-full justify-start px-4 py-3 text-left"
-          >
-            <span className="text-base font-semibold text-slate-900">
-              {loading === account.delegationId ? 'Inafungua...' : account.names}
-            </span>
-          </Button>
+            icon={<UserRound className="h-6 w-6" aria-hidden />}
+            title={loading === account.delegationId ? t.helpers.opening : account.names}
+          />
         ))}
       </div>
-    </section>
+    </SectionCard>
   );
 }

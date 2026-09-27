@@ -1,113 +1,91 @@
-import Link from 'next/link';
+import { ShieldCheck, UserRound } from 'lucide-react';
 import { db } from '@/lib/db';
 import { requireMember } from '@/lib/session';
-import { Navbar } from '@/components/navbar';
-import { Footer } from '@/components/footer';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, ShieldCheck } from 'lucide-react';
+import { getPortalStrings } from '@/lib/i18n';
+import { formatPhone } from '@/lib/phone';
 import { AddHelperForm } from '@/components/add-helper-form';
 import { RevokeHelperButton } from '@/components/revoke-helper-button';
-import { formatPhone } from '@/lib/phone';
-
-const PERMISSION_LABELS: Record<string, { sw: string; en: string }> = {
-  VIEW_FINANCES: { sw: 'Kuona salio', en: 'See balance' },
-  MAKE_PAYMENTS: { sw: 'Kulipa', en: 'Make payments' },
-  SUBMIT_FORMS: { sw: 'Kujaza fomu', en: 'Submit forms' },
-  EDIT_PROFILE: { sw: 'Kubadilisha taarifa', en: 'Edit details' },
-};
+import { PageShell } from '@/components/portal/page-shell';
+import { PageHeader } from '@/components/portal/page-header';
+import { SectionCard } from '@/components/portal/section-card';
+import { StatusBadge } from '@/components/portal/status-badge';
+import { EmptyState } from '@/components/portal/empty-state';
+import { HelpButton } from '@/components/portal/help-button';
 
 export default async function PortalAccessPage() {
   const ctx = await requireMember();
+  const t = await getPortalStrings();
 
   const delegations = await db.delegation.findMany({
     where: { ownerMemberId: ctx.memberId, status: { in: ['ACTIVE', 'PENDING_OWNER_APPROVAL'] } },
     orderBy: { createdAt: 'desc' },
   });
 
-  return (
-    <div className="flex min-h-screen flex-col bg-slate-50">
-      <Navbar />
-      <main className="mx-auto w-full max-w-3xl flex-grow space-y-6 px-4 pb-16 pt-28 sm:px-6">
-        <div>
-          <Button asChild variant="ghost" size="sm" className="mb-3 gap-1.5 text-slate-600">
-            <Link href="/portal">
-              <ArrowLeft className="h-4 w-4" />
-              Rudi / Back
-            </Link>
-          </Button>
-          <h1 className="text-3xl font-bold text-slate-900">Wasaidizi wangu</h1>
-          <p className="mt-1 text-lg text-slate-600">
-            People who can help with my account
-          </p>
-        </div>
+  const permissionLabel = (p: string) =>
+    t.helpers.permissions[p as keyof typeof t.helpers.permissions] ?? p;
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5 text-emerald-700" aria-hidden />
-              Nani anaweza kuona akaunti yangu
-            </CardTitle>
-            <CardDescription className="text-base">
-              Unaweza kumwondoa mtu wakati wowote. Kila kitu wanachofanya kinaandikwa.
-              <span className="mt-1 block text-slate-500">
-                You can remove someone at any time. Everything they do is recorded against
-                your account.
-              </span>
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {delegations.length === 0 ? (
-              <p className="text-base text-slate-600">
-                Hakuna mtu mwingine anayeweza kuona akaunti yako.
-                <span className="ml-1 text-slate-500">Nobody else can see your account.</span>
-              </p>
-            ) : (
-              <ul className="flex flex-col gap-3">
-                {delegations.map((d) => (
-                  <li
-                    key={d.id}
-                    className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-slate-200 p-4"
-                  >
-                    <div className="space-y-1">
-                      <p className="text-base font-semibold text-slate-900">
-                        {d.delegateName}
-                        {d.relationship ? (
-                          <span className="ml-2 text-base font-normal text-slate-500">
-                            ({d.relationship})
-                          </span>
-                        ) : null}
-                      </p>
-                      <p className="text-sm text-slate-600">
-                        {formatPhone(d.delegatePhoneE164)}
-                      </p>
-                      <p className="text-sm text-slate-600">
-                        {d.permissions
-                          .map((p) => PERMISSION_LABELS[p]?.en ?? p)
-                          .join(' · ')}
-                      </p>
-                      {d.status === 'PENDING_OWNER_APPROVAL' ? (
-                        <p className="text-sm font-semibold text-amber-700">
-                          Inasubiri uthibitisho wako / Waiting for your confirmation
-                        </p>
+  return (
+    <PageShell width="narrow">
+      <PageHeader
+        back={{ href: '/portal', label: t.common.back }}
+        title={t.helpers.title}
+        subtitle={t.helpers.subtitle}
+        actions={<HelpButton />}
+      />
+
+      <div className="space-y-6">
+        <SectionCard
+          title={t.helpers.whoTitle}
+          description={t.helpers.whoBody}
+          icon={<ShieldCheck className="h-5 w-5 text-primary" aria-hidden />}
+        >
+          {delegations.length === 0 ? (
+            <EmptyState
+              icon={<UserRound className="h-6 w-6" aria-hidden />}
+              title={t.helpers.none}
+              body={t.helpers.noneBody}
+              className="py-6"
+            />
+          ) : (
+            <ul className="divide-y divide-border/60">
+              {delegations.map((d) => (
+                <li
+                  key={d.id}
+                  className="flex flex-col gap-4 py-5 first:pt-0 last:pb-0 sm:flex-row sm:items-start sm:justify-between"
+                >
+                  <div className="min-w-0 space-y-1.5">
+                    <p className="break-words text-lg font-semibold text-foreground">
+                      {d.delegateName}
+                      {d.relationship ? (
+                        <span className="ml-2 text-base font-normal text-muted-foreground">
+                          ({d.relationship})
+                        </span>
                       ) : null}
+                    </p>
+                    <p className="text-base text-muted-foreground">{formatPhone(d.delegatePhoneE164)}</p>
+                    <p className="text-base text-foreground">
+                      {d.permissions.map(permissionLabel).join(' · ')}
+                    </p>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {d.status === 'PENDING_OWNER_APPROVAL' ? (
+                        <StatusBadge tone="warning">{t.helpers.pending}</StatusBadge>
+                      ) : (
+                        <StatusBadge tone="success">{t.helpers.active}</StatusBadge>
+                      )}
                       {d.origin === 'ADMIN_PROVISIONED' ? (
-                        <p className="text-sm text-slate-500">
-                          Iliwekwa na ofisi / Set up by the TSA office
-                        </p>
+                        <StatusBadge tone="neutral">{t.helpers.byOffice}</StatusBadge>
                       ) : null}
                     </div>
-                    <RevokeHelperButton delegationId={d.id} name={d.delegateName} />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+                  </div>
+                  <RevokeHelperButton delegationId={d.id} name={d.delegateName} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </SectionCard>
 
         <AddHelperForm />
-      </main>
-      <Footer />
-    </div>
+      </div>
+    </PageShell>
   );
 }

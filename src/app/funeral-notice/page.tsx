@@ -20,7 +20,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { toast } from 'sonner';
 import { submitFuneralNotice } from '@/features/funeral/actions';
 import { useLanguage } from '@/components/language-context';
-import { Heart, User, Calendar, MapPin, AlertCircle, Phone, Info } from 'lucide-react';
+import { Heart, User, MapPin, AlertCircle, Info } from 'lucide-react';
 
 const translations = {
   en: {
@@ -39,6 +39,7 @@ const translations = {
     causeOfDeath: "Cause of Death",
     contactName: "Full Name",
     contactPhone: "Phone Number",
+    contactLabel: "Contact",
     burialLocation: "Burial Location",
     burialDate: "Burial Date",
     placeholder: "Type here",
@@ -63,6 +64,7 @@ const translations = {
     causeOfDeath: "Sababu ya kifo",
     contactName: "Jina Kamili",
     contactPhone: "Nambari ya Simu",
+    contactLabel: "Msimamizi",
     burialLocation: "Mahali pa Mazishi",
     burialDate: "Tarehe ya Mazishi",
     placeholder: "Andika hapa",
@@ -87,6 +89,15 @@ const formSchema = z.object({
   burialLocation: z.string().min(2, "Required / Inahitajika"),
   burialDate: z.string().min(1, "Required / Inahitajika"),
 });
+
+function SectionHeading({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2 border-b border-border/60 pb-3">
+      <span className="text-primary">{icon}</span>
+      <h3 className="font-serif text-xl font-bold text-foreground">{children}</h3>
+    </div>
+  );
+}
 
 export default function FuneralNoticePage() {
   const { language: lang } = useLanguage();
@@ -135,48 +146,48 @@ export default function FuneralNoticePage() {
 
       toast.success(result.reference ? `${t.success} (Kumbukumbu / Reference: ${result.reference})` : t.success, { duration: 12000 });
       form.reset();
-    } catch (error) {
+    } catch {
       toast.error(t.error);
     } finally {
       setIsSubmitting(false);
     }
   }
 
+  const inputClass = "h-12 bg-background text-base";
+  const labelClass = "text-base font-semibold text-foreground";
+
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-slate-50/50 pt-32 pb-20">
+      <div className="min-h-screen bg-background pt-32 pb-20">
         <div className="container mx-auto px-4 max-w-3xl">
 
-          <Card className="border border-slate-200 shadow-2xl shadow-slate-200/50 bg-white overflow-hidden">
-            <div className="h-2 bg-slate-800 w-full" />
-            <CardHeader className="pt-10 pb-6 text-center border-b border-slate-100 bg-slate-50/30">
-              <div className="mx-auto h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-                <Heart className="h-6 w-6 text-slate-600 fill-slate-600" />
+          <Card className="overflow-hidden rounded-3xl border border-border/60 bg-card shadow-sm">
+            <div className="h-2 w-full bg-primary" />
+            <CardHeader className="border-b border-border/60 bg-muted/40 pt-10 pb-6 text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                <Heart className="h-6 w-6 fill-primary text-primary" aria-hidden />
               </div>
-              <CardTitle className="text-3xl font-serif font-bold tracking-tight text-slate-900">{t.header}</CardTitle>
-              <CardDescription className="text-lg font-medium text-slate-600 mt-2">{t.subTitle}</CardDescription>
+              <CardTitle className="font-serif text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{t.header}</CardTitle>
+              <CardDescription className="mt-2 text-lg font-medium text-muted-foreground">{t.subTitle}</CardDescription>
             </CardHeader>
 
-            <CardContent className="pt-8 pb-12 px-6 md:px-12">
+            <CardContent className="px-5 pt-8 pb-12 md:px-12">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-10">
 
                   {/* Reporter Info */}
                   <div className="space-y-6">
-                    <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                      <User className="h-5 w-5 text-slate-500" />
-                      <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400">{t.reporterSection}</h3>
-                    </div>
+                    <SectionHeading icon={<User className="h-5 w-5" aria-hidden />}>{t.reporterSection}</SectionHeading>
 
                     <FormField
                       control={form.control}
                       name="fullName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-sm font-semibold text-slate-700">{t.fullName}</FormLabel>
+                          <FormLabel className={labelClass}>{t.fullName}</FormLabel>
                           <FormControl>
-                            <Input className="bg-slate-50/50 h-11 border-slate-200 focus:ring-slate-500/20 transition-all font-medium" placeholder={t.placeholder} {...field} />
+                            <Input className={inputClass} placeholder={t.placeholder} {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -186,10 +197,7 @@ export default function FuneralNoticePage() {
 
                   {/* Deceased Info */}
                   <div className="space-y-6">
-                    <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                      <Info className="h-5 w-5 text-slate-500" />
-                      <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400">{t.deceasedSection}</h3>
-                    </div>
+                    <SectionHeading icon={<Info className="h-5 w-5" aria-hidden />}>{t.deceasedSection}</SectionHeading>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <FormField
@@ -197,9 +205,9 @@ export default function FuneralNoticePage() {
                         name="deceasedName"
                         render={({ field }) => (
                           <FormItem className="md:col-span-2">
-                            <FormLabel className="text-sm font-semibold text-slate-700">{t.deceasedName}</FormLabel>
+                            <FormLabel className={labelClass}>{t.deceasedName}</FormLabel>
                             <FormControl>
-                              <Input className="bg-slate-50/50 h-11 border-slate-200 focus:ring-slate-500/20 transition-all font-medium" placeholder={t.placeholder} {...field} />
+                              <Input className={inputClass} placeholder={t.placeholder} {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -210,9 +218,9 @@ export default function FuneralNoticePage() {
                         name="relation"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm font-semibold text-slate-700">{t.relation}</FormLabel>
+                            <FormLabel className={labelClass}>{t.relation}</FormLabel>
                             <FormControl>
-                              <Input className="bg-slate-50/50 h-11 border-slate-200 focus:ring-slate-500/20 transition-all font-medium" placeholder={t.placeholder} {...field} />
+                              <Input className={inputClass} placeholder={t.placeholder} {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -223,9 +231,9 @@ export default function FuneralNoticePage() {
                         name="placeOfPassing"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm font-semibold text-slate-700">{t.placeOfPassing}</FormLabel>
+                            <FormLabel className={labelClass}>{t.placeOfPassing}</FormLabel>
                             <FormControl>
-                              <Input className="bg-slate-50/50 h-11 border-slate-200 focus:ring-slate-500/20 transition-all font-medium" placeholder={t.placeholder} {...field} />
+                              <Input className={inputClass} placeholder={t.placeholder} {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -236,9 +244,9 @@ export default function FuneralNoticePage() {
                         name="dateTimeOfPassing"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm font-semibold text-slate-700">{t.dateTimeOfPassing}</FormLabel>
+                            <FormLabel className={labelClass}>{t.dateTimeOfPassing}</FormLabel>
                             <FormControl>
-                              <Input className="bg-slate-50/50 h-11 border-slate-200 focus:ring-slate-500/20 transition-all font-medium" type="datetime-local" {...field} />
+                              <Input className={inputClass} type="datetime-local" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -249,9 +257,9 @@ export default function FuneralNoticePage() {
                         name="causeOfDeath"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm font-semibold text-slate-700">{t.causeOfDeath}</FormLabel>
+                            <FormLabel className={labelClass}>{t.causeOfDeath}</FormLabel>
                             <FormControl>
-                              <Input className="bg-slate-50/50 h-11 border-slate-200 focus:ring-slate-500/20 transition-all font-medium" placeholder={t.placeholder} {...field} />
+                              <Input className={inputClass} placeholder={t.placeholder} {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -262,31 +270,28 @@ export default function FuneralNoticePage() {
 
                   {/* Emergency Contacts */}
                   <div className="space-y-6">
-                    <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                      <AlertCircle className="h-5 w-5 text-slate-500" />
-                      <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400">{t.emergencySection}</h3>
-                    </div>
-                    <p className="text-sm text-slate-500 italic">
+                    <SectionHeading icon={<AlertCircle className="h-5 w-5" aria-hidden />}>{t.emergencySection}</SectionHeading>
+                    <p className="text-base text-muted-foreground">
                       {t.emergencyDescription}
                     </p>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {contactFields.map((field, index) => (
-                        <div key={field.id} className="p-6 rounded-xl bg-slate-50/50 border border-slate-200 space-y-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <div className="h-6 w-6 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-bold">
+                        <div key={field.id} className="space-y-4 rounded-2xl border border-border/60 bg-muted/40 p-5">
+                          <div className="mb-2 flex items-center gap-2">
+                            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
                               {index + 1}
                             </div>
-                            <span className="text-sm font-bold text-slate-800">Contact {index + 1}</span>
+                            <span className="text-base font-bold text-foreground">{t.contactLabel} {index + 1}</span>
                           </div>
                           <FormField
                             control={form.control}
                             name={`emergencyContacts.${index}.fullName`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs font-semibold text-slate-600">{t.contactName}</FormLabel>
+                                <FormLabel className={labelClass}>{t.contactName}</FormLabel>
                                 <FormControl>
-                                  <Input className="bg-white h-10 border-slate-200" placeholder={t.contactName} {...field} />
+                                  <Input className="h-12 bg-card text-base" placeholder={t.contactName} {...field} />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -297,9 +302,9 @@ export default function FuneralNoticePage() {
                             name={`emergencyContacts.${index}.phoneNumber`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-xs font-semibold text-slate-600">{t.contactPhone}</FormLabel>
+                                <FormLabel className={labelClass}>{t.contactPhone}</FormLabel>
                                 <FormControl>
-                                  <Input className="bg-white h-10 border-slate-200" placeholder={t.contactPhone} {...field} />
+                                  <Input className="h-12 bg-card text-base" type="tel" inputMode="tel" placeholder={t.contactPhone} {...field} />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -312,10 +317,7 @@ export default function FuneralNoticePage() {
 
                   {/* Burial Details */}
                   <div className="space-y-6">
-                    <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                      <MapPin className="h-5 w-5 text-slate-500" />
-                      <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400">{t.burialSection}</h3>
-                    </div>
+                    <SectionHeading icon={<MapPin className="h-5 w-5" aria-hidden />}>{t.burialSection}</SectionHeading>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <FormField
@@ -323,9 +325,9 @@ export default function FuneralNoticePage() {
                         name="burialLocation"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm font-semibold text-slate-700">{t.burialLocation}</FormLabel>
+                            <FormLabel className={labelClass}>{t.burialLocation}</FormLabel>
                             <FormControl>
-                              <Input className="bg-slate-50/50 h-11 border-slate-200 focus:ring-slate-500/20 transition-all font-medium" placeholder={t.placeholder} {...field} />
+                              <Input className={inputClass} placeholder={t.placeholder} {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -336,9 +338,9 @@ export default function FuneralNoticePage() {
                         name="burialDate"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm font-semibold text-slate-700">{t.burialDate}</FormLabel>
+                            <FormLabel className={labelClass}>{t.burialDate}</FormLabel>
                             <FormControl>
-                              <Input className="bg-slate-50/50 h-11 border-slate-200 focus:ring-slate-500/20 transition-all font-medium" type="date" {...field} />
+                              <Input className={inputClass} type="date" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -347,7 +349,7 @@ export default function FuneralNoticePage() {
                     </div>
                   </div>
 
-                  <Button type="submit" className="w-full text-xl h-16 bg-slate-800 hover:bg-slate-900 text-white font-bold shadow-xl shadow-slate-200 rounded-xl transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-70" disabled={isSubmitting}>
+                  <Button type="submit" className="btn-shimmer h-16 w-full rounded-2xl border-0 text-xl font-bold text-primary-foreground disabled:opacity-70" disabled={isSubmitting}>
                     {isSubmitting ? (
                       <span className="flex items-center gap-2">
                         <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />

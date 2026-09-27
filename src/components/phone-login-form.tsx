@@ -108,12 +108,12 @@ export function PhoneLoginForm() {
     return (
       <form onSubmit={handleRequestCode} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="phone" className="text-base font-semibold text-slate-800">
+          <Label htmlFor="phone" className="text-base font-semibold text-foreground">
             Namba yako ya simu
-            <span className="ml-2 text-sm font-normal text-slate-500">Your phone number</span>
+            <span className="ml-2 text-base font-normal text-muted-foreground">Your phone number</span>
           </Label>
           <div className="relative">
-            <Phone className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" aria-hidden />
+            <Phone className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground" aria-hidden />
             <Input
               id="phone"
               type="tel"
@@ -122,21 +122,21 @@ export function PhoneLoginForm() {
               placeholder="(713) 555-0100"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="h-12 pl-11 text-base"
+              className="h-12 pl-11 text-lg"
               disabled={loading}
               required
             />
           </div>
-          <p className="text-sm text-slate-600">
+          <p className="text-base text-muted-foreground">
             Tutakutumia namba ya uthibitisho.
-            <span className="ml-1 text-slate-500">We will send you a code.</span>
+            <span className="ml-1">We will send you a code.</span>
           </p>
         </div>
 
         <Button
           type="submit"
           disabled={loading || phone.trim().length < 7}
-          className="h-12 w-full bg-emerald-600 text-base font-semibold text-white hover:bg-emerald-700"
+          className="btn-shimmer h-12 w-full border-0 text-lg font-bold text-primary-foreground"
         >
           {loading ? 'Inatuma...' : 'Nitumie namba / Send me a code'}
         </Button>
@@ -150,35 +150,35 @@ export function PhoneLoginForm() {
         <button
           type="button"
           onClick={() => setStep('phone')}
-          className="flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900"
+          className="inline-flex min-h-12 items-center gap-1.5 text-base font-medium text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
           Badilisha namba / Change number
         </button>
 
         <div className="space-y-3">
-          <Label htmlFor="code" className="text-base font-semibold text-slate-800">
+          <Label htmlFor="code" className="text-base font-semibold text-foreground">
             Weka namba ya uthibitisho
-            <span className="ml-2 text-sm font-normal text-slate-500">Enter your code</span>
+            <span className="ml-2 text-base font-normal text-muted-foreground">Enter your code</span>
           </Label>
 
           {demoCode ? (
-            <div className="rounded-lg border-2 border-amber-300 bg-amber-50 px-4 py-3">
-              <p className="flex items-center gap-2 text-sm font-bold text-amber-900">
-                <MessageSquare className="h-4 w-4" aria-hidden />
+            <div className="rounded-2xl border-2 border-warning/40 bg-warning/10 px-4 py-3">
+              <p className="flex items-center gap-2 text-base font-bold text-foreground">
+                <MessageSquare className="h-5 w-5 text-warning" aria-hidden />
                 Hakuna ujumbe uliotumwa / No message was sent
               </p>
-              <p className="mt-1 text-sm text-amber-800">
+              <p className="mt-1 text-base text-muted-foreground">
                 This is the test system. Your code is:
               </p>
-              <p className="mt-1 font-mono text-2xl font-bold tracking-[0.3em] text-amber-950">
+              <p className="mt-1 font-mono text-2xl font-bold tracking-[0.3em] text-foreground">
                 {demoCode}
               </p>
             </div>
           ) : (
-            <p className="text-sm text-slate-600">
+            <p className="text-base text-muted-foreground">
               Tumekutumia namba ya tarakimu 6.
-              <span className="ml-1 text-slate-500">We sent a 6-digit code.</span>
+              <span className="ml-1">We sent a 6-digit code.</span>
             </p>
           )}
 
@@ -195,7 +195,7 @@ export function PhoneLoginForm() {
             >
               <InputOTPGroup>
                 {[0, 1, 2, 3, 4, 5].map((i) => (
-                  <InputOTPSlot key={i} index={i} className="h-14 w-12 text-xl" />
+                  <InputOTPSlot key={i} index={i} className="h-14 w-11 text-xl sm:w-12" />
                 ))}
               </InputOTPGroup>
             </InputOTP>
@@ -205,7 +205,7 @@ export function PhoneLoginForm() {
             type="button"
             onClick={() => handleVerifyCode(code)}
             disabled={loading || code.length !== 6}
-            className="h-12 w-full bg-emerald-600 text-base font-semibold text-white hover:bg-emerald-700"
+            className="btn-shimmer h-12 w-full border-0 text-lg font-bold text-primary-foreground"
           >
             {loading ? 'Inathibitisha...' : 'Ingia / Sign in'}
           </Button>
@@ -218,10 +218,10 @@ export function PhoneLoginForm() {
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-base font-semibold text-slate-800">
+        <p className="text-base font-semibold text-foreground">
           Akaunti zaidi ya moja zinatumia namba hii
         </p>
-        <p className="text-sm text-slate-600">
+        <p className="text-base text-muted-foreground">
           More than one account uses this phone. Which one is yours?
         </p>
       </div>
@@ -238,14 +238,14 @@ export function PhoneLoginForm() {
                 void finishSignIn(candidate, ticket).finally(() => setLoading(false));
               }
             }}
-            className="h-auto w-full justify-start px-4 py-3 text-left"
+            className="h-auto min-h-12 w-full justify-start rounded-xl border-2 border-border/70 px-4 py-3 text-left hover:border-primary hover:bg-primary/5"
           >
             <span className="flex flex-col gap-0.5">
-              <span className="text-base font-semibold text-slate-900">
+              <span className="text-base font-semibold text-foreground">
                 {candidate.displayName}
               </span>
               {candidate.kind === 'claim' && (
-                <span className="text-sm font-normal text-slate-600">
+                <span className="text-sm font-normal text-muted-foreground">
                   Akaunti mpya / Set up this account
                 </span>
               )}
@@ -257,7 +257,7 @@ export function PhoneLoginForm() {
       <button
         type="button"
         onClick={() => setStep('phone')}
-        className="flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900"
+        className="inline-flex min-h-12 items-center gap-1.5 text-base font-medium text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
         Anza upya / Start again

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
+import { UserMinus } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { usePortalStrings } from '@/components/portal/use-portal-strings';
 import { revokeDelegation } from '@/features/delegation/actions';
 
 export function RevokeHelperButton({
@@ -24,6 +25,7 @@ export function RevokeHelperButton({
   delegationId: string;
   name: string;
 }) {
+  const t = usePortalStrings();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -32,13 +34,13 @@ export function RevokeHelperButton({
     try {
       const res = await revokeDelegation({ delegationId });
       if (res.success) {
-        toast.success(`${name} can no longer see your account.`);
+        toast.success(t.helpers.removed(name));
         router.refresh();
       } else {
         toast.error(res.error);
       }
     } catch {
-      toast.error('Could not remove access. Please try again.');
+      toast.error(t.helpers.removeFailed);
     } finally {
       setLoading(false);
     }
@@ -47,31 +49,34 @@ export function RevokeHelperButton({
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="outline" className="h-11 border-rose-200 text-rose-700 hover:bg-rose-50">
-          Mwondoe / Remove
-        </Button>
+        <button
+          type="button"
+          className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-destructive/40 bg-card px-4 text-base font-semibold text-destructive transition-colors hover:bg-destructive/10"
+        >
+          <UserMinus className="h-5 w-5" aria-hidden />
+          {t.helpers.remove}
+        </button>
       </AlertDialogTrigger>
-      <AlertDialogContent className="font-sans">
+      <AlertDialogContent className="rounded-3xl font-sans sm:max-w-md">
         <AlertDialogHeader>
-          <AlertDialogTitle>Remove {name}?</AlertDialogTitle>
-          <AlertDialogDescription className="text-base text-slate-600">
-            Hataweza kuona akaunti yako tena, mara moja.
-            <span className="mt-1 block text-slate-500">
-              They will lose access straight away. You can add them again later.
-            </span>
+          <AlertDialogTitle className="font-serif text-2xl">{t.helpers.removeTitle(name)}</AlertDialogTitle>
+          <AlertDialogDescription className="text-base text-muted-foreground">
+            {t.helpers.removeBody}
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={loading}>Ghairi / Cancel</AlertDialogCancel>
+        <AlertDialogFooter className="gap-2">
+          <AlertDialogCancel disabled={loading} className="min-h-12 rounded-xl px-5 text-base font-semibold">
+            {t.common.cancel}
+          </AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault();
               handleRevoke();
             }}
             disabled={loading}
-            className="bg-rose-600 text-white hover:bg-rose-700"
+            className="min-h-12 rounded-xl bg-destructive px-5 text-base font-bold text-destructive-foreground hover:bg-destructive/90"
           >
-            {loading ? '...' : 'Mwondoe / Remove'}
+            {loading ? t.common.loading : t.helpers.remove}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

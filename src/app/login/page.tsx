@@ -32,28 +32,28 @@ export default async function LoginPage() {
     : [];
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50">
+    <div className="flex flex-col min-h-screen bg-background">
       <Navbar />
 
       <main className="flex-grow flex items-center justify-center pt-32 pb-16 px-4">
-        <Card className="w-full max-w-md shadow-xl border-t-4 border-t-emerald-600 bg-white">
+        <Card className="w-full max-w-md overflow-hidden rounded-3xl border border-border/60 border-t-4 border-t-primary bg-card shadow-sm">
           <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-2xl font-bold tracking-tight text-slate-900">
+            <CardTitle className="font-serif text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               {t.auth.title}
             </CardTitle>
-            <CardDescription className="text-slate-500">
+            <CardDescription className="text-base text-muted-foreground">
               {t.auth.subtitle}
             </CardDescription>
           </CardHeader>
 
           <LoginForm>{demo ? <DemoSignIn personas={personas} /> : null}</LoginForm>
 
-          <CardFooter className="flex justify-center border-t border-slate-100 py-4 bg-slate-50/50">
-            <p className="text-sm text-slate-600">
+          <CardFooter className="flex justify-center border-t border-border/60 bg-muted/40 py-4">
+            <p className="text-center text-base text-muted-foreground">
               {t.auth.joinPrompt}{' '}
               <a
                 href="/membership"
-                className="text-emerald-600 hover:text-emerald-700 font-semibold underline"
+                className="font-semibold text-primary underline hover:text-primary/80"
               >
                 {t.auth.joinLink}
               </a>
