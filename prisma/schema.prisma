@@ -97,6 +97,8 @@ model Member {
   delegationsGranted Delegation[] @relation("DelegationOwner")
   ledgerEntries      LedgerEntry[]
   balance            MemberBalance?
+  claims             Claim[]
+  assessments        Assessment[]
 
   @@index([archivedAt])
   @@index([phoneE164])
@@ -500,4 +502,163 @@ model DemoSetting {
   key       String   @id
   value     Json
   updatedAt DateTime @updatedAt
+}
+
+// ── Stage 3: cases (shida/msiba) and the contributions they raise ──────────
+
+/// KATIBA Art 18.1 / 18.2 — the four kinds of case. See CLAIM_TYPES in
+/// src/lib/finance/constants.ts for the benefit, levy and divisor each uses.
+enum ClaimType {
+  /// The member has died. Paid to the family.
+  MEMBER_DEATH
+  /// The member's child under 21, living in the USA.
+  CHILD_DEATH
+  /// A registered relative (Art 4.4): spouse, parent/guardian, sibling, or a
+  /// child who is 21+ or lives abroad.
+  RELATIVE_DEATH
+  /// Art 4.3 — critical illness, immigration detention, fire.
+  HARDSHIP
+}
+
+enum ClaimStatus {
+  /// Filed by the member (or a helper, or an officer). Nobody has looked yet.
+  SUBMITTED
+  /// The Katibu/Muhakiki is checking documents and eligibility.
+  UNDER_REVIEW
+  /// Approved with a benefit amount; not yet announced to members.
+  APPROVED
+  /// Announced — members' shares are charged and being collected.
+  COLLECTING
+  /// The benefit has been paid out in full.
+  PAID
+  CLOSED
+  REJECTED
+  /// Kihiari — announced for voluntary support only; no shares are charged.
+  VOLUNTARY
+}
+
+/// Who the case is about, relative to the member (Art 4.4).
+enum ClaimRelationship {
+  SELF
+  SPOUSE
+  CHILD
+  PARENT_GUARDIAN
+  SIBLING
+}
+
+enum HardshipCategory {
+  /// Life-threatening, more than two weeks in hospital. Member, spouse, children.
+  ILLNESS_CRITICAL
+  /// Member only.
+  IMMIGRATION_DETENTION
+  /// Member only.
+  FIRE
+}
+
+/// A case: a death or hardship reported to TSA, and everything that follows —
+/// review, approval, the members' contributions, and the payout.
+model Claim {
+  id        String      @id @default(uuid())
+  /// Short code a member can read over the phone, e.g. "TSA-C-4K2P9".
+  reference String      @unique
+
+  /// The member the case belongs to (for MEMBER_DEATH, the deceased).
+  memberId  String
+  member    Member      @relation(fields: [memberId], references: [id], onDelete: Restrict)
+
+  type      ClaimType
+  /// Set at approval when the reviewer re-routes the case, e.g. a CHILD_DEATH
+  /// for a child living abroad paid at the relative tier. Null means `type`.
+  effectiveType ClaimType?
+  status    ClaimStatus @default(SUBMITTED)
+
+  subjectName       String
+  relationship      ClaimRelationship
+  subjectAge        Int?
+  subjectLivesInUsa Boolean?
+  hardshipCategory  HardshipCategory?
+
+  eventDate   DateTime
+  reportedAt  DateTime @default(now())
+  description String
+  contactPhone String?
+
+  /// MEMBER_DEATH: who receives the benefit for the family.
+  recipientName         String?
+  recipientPhone        String?
+  recipientRelationship String?
+
+  /// Who filed it, and whether on someone else's behalf (a helper, an officer).
+  filedByUserId String?
+  filedOnBehalf Boolean  @default(false)
+  locale        String   @default("sw")
+
+  /// Art 18.9 — the member's standing on the date of the event, fixed at review.
+  tierAtEvent          String?
+  standingAtEventCents Int?
+  /// Snapshot of the eligibility flags the reviewer saw when deciding.
+  eligibility          Json?
+  /// Art 4.3 — which supporting documents the reviewer has seen.
+  documentsChecklist   Json     @default("{}")
+  /// Art 18.9 — conditions confirmed before money is handed over.
+  payoutConditions     Json     @default("{}")
+
+  benefitCents  Int?
+  levyPoolCents Int?
+
+  /// Art 4.3 — $300 toward a memorial or prayer gathering, managed by a leader.
+  memorialRequested Boolean   @default(false)
+  memorialDate      DateTime?
+
+  reviewedById String?
+  decisionNote String?
+  reviewStartedAt DateTime?
+  approvedAt   DateTime?
+  announcedAt  DateTime?
+  /// Art 17 — "ndani ya majuma mawili": announced + 14 days.
+  dueAt        DateTime?
+  paidAt       DateTime?
+  closedAt     DateTime?
+  rejectedAt   DateTime?
+
+  /// The public funeral notice this case was opened from, if any.
+  sourceSubmissionId String? @unique
+
+  assessments Assessment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([memberId, eventDate])
+}
+
+/// One member's share of one case (Art 17).
+///
+/// The money itself lives in the ledger, tagged with this row's id: a CHARGE on
+/// the levy account, and PAYMENT or advance-transfer entries against it. What
+/// is still owed is always derived from those entries, never stored here.
+model Assessment {
+  id        String   @id @default(uuid())
+  claimId   String
+  claim     Claim    @relation(fields: [claimId], references: [id], onDelete: Restrict)
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Restrict)
+
+  amountCents Int
+  /// The Houston calendar month the share counts against for the Art 17 caps,
+  /// "YYYY-MM". A share over the cap moves to the next month.
+  billingMonth String
+  dueAt        DateTime
+
+  /// Art 17.4 — a member who gave notice is not in breach.
+  excusedAt   DateTime?
+  excuseNote  String?
+  excusedById String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([claimId, memberId])
+  @@index([memberId, dueAt])
+  @@index([memberId, billingMonth])
 }

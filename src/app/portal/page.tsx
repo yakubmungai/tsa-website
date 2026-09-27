@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { CalendarCheck, EyeOff, FileText, HandHeart, History, Shield, User, Users, Wallet } from 'lucide-react';
+import { AlertTriangle, CalendarCheck, ClipboardList, EyeOff, FileText, HandCoins, HandHeart, History, Shield, User, Users, Wallet } from 'lucide-react';
 import { db } from '@/lib/db';
 import { getEffectiveContext, checkPermission } from '@/lib/session';
 import { getLocale, getPortalStrings } from '@/lib/i18n';
@@ -9,6 +9,7 @@ import { getMemberStanding } from '@/lib/finance/ledger';
 import { heroStateFor } from '@/lib/finance/hero';
 import { suggestedTopUpCents } from '@/lib/finance/balance';
 import { formatUSD } from '@/lib/money';
+import { now } from '@/lib/clock';
 import { AccountSwitcher } from '@/components/account-switcher';
 import { PageShell } from '@/components/portal/page-shell';
 import { PageHeader } from '@/components/portal/page-header';
@@ -21,6 +22,8 @@ import { LedgerHistory } from '@/components/portal/ledger-history';
 import { ChoiceLink } from '@/components/portal/choice-button';
 import { EmptyState } from '@/components/portal/empty-state';
 import { TextSizeToggle } from '@/components/portal/text-size-toggle';
+import { OweList, type OweItem } from '@/components/portal/owe-list';
+import { loadShares } from '@/features/claims/service';
 import { HelpButton } from '@/components/portal/help-button';
 
 export default async function PortalPage() {
@@ -98,11 +101,12 @@ export default async function PortalPage() {
       <div className="grid gap-3">
         {canSubmit ? (
           <ChoiceLink
-            href="/portal/forms"
+            href="/portal/claims/new"
             icon={<HandHeart className="h-6 w-6" />}
             title={t.dashboard.fileClaim}
           />
         ) : null}
+        <ChoiceLink href="/portal/claims" icon={<ClipboardList className="h-6 w-6" />} title={t.dashboard.myClaims} />
         {!ctx.isActing ? (
           <ChoiceLink href="/portal/access" icon={<Users className="h-6 w-6" />} title={t.dashboard.helpers} />
         ) : null}
@@ -125,10 +129,11 @@ export default async function PortalPage() {
     );
   }
 
-  const [standing, entries] = await Promise.all([
+  const [standing, entries, shareRows] = await Promise.all([
     getMemberStanding(memberId),
     db.ledgerEntry.findMany({
-      where: { memberId },
+      // Shares deferred to a later month (Art 17 cap) appear when they fall due.
+      where: { memberId, occurredAt: { lte: await now() } },
       orderBy: [{ occurredAt: 'desc' }, { postedAt: 'desc' }],
       take: 100,
       select: {
@@ -142,7 +147,33 @@ export default async function PortalPage() {
         voidedAt: true,
       },
     }),
+    db.assessment.findMany({
+      where: { memberId },
+      select: { id: true, claim: { select: { reference: true, subjectName: true } } },
+    }),
   ]);
+
+  const asOf = standing.asOf;
+  const shares = await loadShares({ memberId }, asOf);
+  const claimOf = new Map(shareRows.map((r) => [r.id, r.claim]));
+  const recent = asOf.getTime() - 30 * 24 * 3600 * 1000;
+  // Everything still owed, plus what was settled in the last month so the
+  // member can see their payment landed.
+  const oweItems: OweItem[] = shares
+    .filter((s) => s.state !== 'PAID' || s.dueAt.getTime() > recent)
+    .map((s) => ({
+      id: s.id,
+      reference: claimOf.get(s.id)?.reference ?? '',
+      subjectName: claimOf.get(s.id)?.subjectName ?? '',
+      amountCents: s.amountCents,
+      outstandingCents: s.outstandingCents,
+      fromAdvanceCents: s.fromAdvanceCents,
+      dueAt: s.dueAt,
+      state: s.state,
+    }));
+  const nextDue = shares
+    .filter((s) => s.state === 'OPEN' || s.state === 'OVERDUE')
+    .sort((a, b) => a.dueAt.getTime() - b.dueAt.getTime())[0];
 
   const state = heroStateFor({
     outstandingCents: standing.outstandingCents,
@@ -159,13 +190,14 @@ export default async function PortalPage() {
     ok: { headline: t.status.ok, body: t.status.okBody },
     owe: {
       headline: t.status.owe(formatUSD(standing.outstandingCents)),
-      body: t.status.oweBody,
-      action: { href: '/portal', label: t.status.payNow },
+      body: nextDue ? t.status.oweBy(dateFmt.format(nextDue.dueAt)) : t.status.oweBody,
+      detail: nextDue ? t.status.oweBody : undefined,
+      action: { href: '#owe', label: t.status.payNow },
     },
     low: {
       headline: t.status.low,
       body: t.status.lowBody(formatUSD(topUp || standing.shortfallCents)),
-      action: { href: '/portal', label: t.status.topUp },
+      action: { href: '#owe', label: t.status.topUp },
     },
     neutral: { headline: t.status.neutral, body: t.status.neutralBody },
   }[state];
@@ -186,6 +218,24 @@ export default async function PortalPage() {
 
       <div className="space-y-8">
         <StatusHero state={state} {...hero} />
+
+        {standing.missedContributions > 0 ? (
+          <p
+            role="alert"
+            className="flex items-start gap-3 rounded-3xl border-2 border-destructive/40 bg-destructive/10 p-5 text-lg"
+          >
+            <AlertTriangle className="mt-1 h-6 w-6 shrink-0 text-destructive" aria-hidden />
+            {t.owe.missedWarning(standing.missedContributions)}
+          </p>
+        ) : null}
+
+        {oweItems.length > 0 ? (
+          <div id="owe" className="scroll-mt-28">
+            <SectionCard title={t.owe.title} description={t.owe.subtitle} icon={<HandCoins className="h-5 w-5 text-primary" />}>
+              <OweList items={oweItems} t={t} formatDate={(d) => dateFmt.format(d)} />
+            </SectionCard>
+          </div>
+        ) : null}
 
         {standing.isWithinNewMemberWait && standing.eligibleFrom ? (
           <SectionCard>

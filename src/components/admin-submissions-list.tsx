@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import {
   AlertTriangle,
   Calendar,
@@ -8,6 +9,7 @@ import {
   CheckCircle2,
   Clock,
   FileText,
+  HandHeart,
   Inbox,
   Loader2,
   User,
@@ -256,6 +258,16 @@ export function AdminSubmissionsList({ initialSubmissions }: { initialSubmission
                 ) : null}
 
                 <div className="mt-auto flex flex-col gap-2 border-t border-border/60 px-5 py-4 sm:flex-row sm:px-6">
+                  {/* A funeral notice becomes a case: the details carry across. */}
+                  {sub.formType === 'FUNERAL_ASSISTANCE' ? (
+                    <Link
+                      href={`/admin/claims/new?from=${sub.id}`}
+                      className="btn-shimmer inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl text-base font-bold text-primary-foreground"
+                    >
+                      <HandHeart className="h-5 w-5" aria-hidden />
+                      {t.adminClaims.convert}
+                    </Link>
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => handleApprove(sub)}

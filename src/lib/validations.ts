@@ -146,3 +146,106 @@ export const reverseLedgerEntrySchema = z
     reason: z.string().trim().min(3, 'Give a short reason').max(300),
   })
   .strict();
+
+// ── Claims (Stage 3) ────────────────────────────────────────────────────────
+
+export const CLAIM_TYPE_VALUES = ['MEMBER_DEATH', 'CHILD_DEATH', 'RELATIVE_DEATH', 'HARDSHIP'] as const;
+export const RELATIONSHIP_VALUES = ['SELF', 'SPOUSE', 'CHILD', 'PARENT_GUARDIAN', 'SIBLING'] as const;
+export const HARDSHIP_VALUES = ['ILLNESS_CRITICAL', 'IMMIGRATION_DETENTION', 'FIRE'] as const;
+
+const claimFields = z
+  .object({
+    type: z.enum(CLAIM_TYPE_VALUES),
+    relationship: z.enum(RELATIONSHIP_VALUES),
+    subjectName: z.string().trim().min(2, 'Name is required').max(160),
+    subjectAge: z.coerce.number().int().min(0).max(125).optional(),
+    subjectLivesInUsa: z.boolean().optional(),
+    hardshipCategory: z.enum(HARDSHIP_VALUES).optional(),
+    eventDate: isoDateInput,
+    description: z.string().trim().min(3, 'Tell us briefly what happened').max(2000),
+    contactPhone: optionalText(40),
+    recipientName: optionalText(160),
+    recipientPhone: optionalText(40),
+    recipientRelationship: optionalText(80),
+    memorialRequested: z.boolean().default(false),
+    memorialDate: isoDateInput.optional().or(z.literal('')).transform((v) => (v ? v : undefined)),
+  })
+  .strict();
+
+/** The rules that tie a case's type to who it can be about (Art 4.3, 4.4, 18.1). */
+function claimRules(v: z.infer<typeof claimFields>, ctx: z.RefinementCtx) {
+  const issue = (path: string, message: string) =>
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
+  if (v.type === 'MEMBER_DEATH') {
+    if (v.relationship !== 'SELF') issue('relationship', 'A member death is about the member');
+    if (!v.recipientName) issue('recipientName', 'Who receives support for the family?');
+  }
+  if (v.type === 'CHILD_DEATH' && v.relationship !== 'CHILD') issue('relationship', 'Choose the child');
+  if (v.type === 'RELATIVE_DEATH' && v.relationship === 'SELF') issue('relationship', 'Choose the relative');
+  if (v.type === 'HARDSHIP' && !v.hardshipCategory) issue('hardshipCategory', 'Choose the kind of hardship');
+}
+
+export const fileClaimSchema = claimFields.superRefine(claimRules);
+export type FileClaimInput = z.infer<typeof fileClaimSchema>;
+
+export const adminCreateClaimSchema = claimFields
+  .extend({
+    memberId: z.string().uuid('Choose a member'),
+    sourceSubmissionId: z.string().uuid().optional(),
+  })
+  .strict()
+  .superRefine(claimRules);
+
+export const claimIdSchema = z.object({ claimId: z.string().uuid() }).strict();
+
+export const approveClaimSchema = z
+  .object({
+    claimId: z.string().uuid(),
+    effectiveType: z.enum(CLAIM_TYPE_VALUES),
+    benefit: centsFromInput.refine((c) => c > 0, 'Enter an amount greater than zero'),
+    note: z.string().trim().max(1000).default(''),
+  })
+  .strict();
+
+export const claimDecisionSchema = z
+  .object({
+    claimId: z.string().uuid(),
+    note: z.string().trim().min(3, 'Give a short reason').max(1000),
+  })
+  .strict();
+
+export const claimChecklistSchema = z
+  .object({
+    claimId: z.string().uuid(),
+    field: z.enum(['documentsChecklist', 'payoutConditions']),
+    key: z.string().trim().min(1).max(40).regex(/^[a-zA-Z]+$/),
+    checked: z.boolean(),
+  })
+  .strict();
+
+export const sharePaymentSchema = z
+  .object({
+    assessmentId: z.string().uuid(),
+    amount: centsFromInput.refine((c) => c > 0, 'Enter an amount greater than zero'),
+    paidOn: isoDateInput,
+    memo: z.string().trim().max(300).default(''),
+  })
+  .strict();
+
+export const excuseShareSchema = z
+  .object({
+    assessmentId: z.string().uuid(),
+    /** Null removes the excuse. */
+    note: z.string().trim().min(3, 'Say what notice was given').max(500).nullable(),
+  })
+  .strict();
+
+export const payoutSchema = z
+  .object({
+    claimId: z.string().uuid(),
+    kind: z.enum(['BENEFIT_PAYOUT', 'MEMORIAL_GRANT']),
+    amount: centsFromInput.refine((c) => c > 0, 'Enter an amount greater than zero'),
+    paidOn: isoDateInput,
+    paidTo: z.string().trim().min(2, 'Who was paid?').max(200),
+  })
+  .strict();

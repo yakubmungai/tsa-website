@@ -2,8 +2,6 @@
 
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export async function submitContactMessage(formData: FormData) {
   try {
     if (!process.env.RESEND_API_KEY) {
@@ -19,6 +17,10 @@ export async function submitContactMessage(formData: FormData) {
 
     console.log(`Attempting to send contact message from ${firstName} ${lastName} (${email}) to ${adminEmail}`);
 
+    // Created per call, not at import: the constructor throws without a key,
+    // and this module is loaded by every page with the footer's contact form —
+    // so a missing key used to break unrelated forms on the same page.
+    const resend = new Resend(process.env.RESEND_API_KEY);
     const { data, error } = await resend.emails.send({
       from: 'TSA Website <website@mail.tansha.org>',
       to: [adminEmail],

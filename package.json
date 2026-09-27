@@ -18,7 +18,8 @@
     "verify:forms": "tsx --conditions=react-server scripts/verify-form-submissions.ts",
     "verify:delegation": "tsx --conditions=react-server scripts/verify-delegation.ts",
     "migrate:ledger": "tsx --conditions=react-server scripts/migrate-ledger.ts",
-    "verify:ledger": "tsx --conditions=react-server scripts/verify-ledger.ts"
+    "verify:ledger": "tsx --conditions=react-server scripts/verify-ledger.ts",
+    "verify:claims": "tsx --conditions=react-server scripts/verify-claims.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

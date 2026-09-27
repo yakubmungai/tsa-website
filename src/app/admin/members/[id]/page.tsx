@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { CalendarCheck, History, MapPin, Phone, PlusCircle, Shield, Users, Wallet } from 'lucide-react';
+import { AlertTriangle, CalendarCheck, HandCoins, History, MapPin, Phone, PlusCircle, Shield, Users, Wallet } from 'lucide-react';
 import { db } from '@/lib/db';
 import { requireAdmin } from '@/lib/session';
 import { getLocale, getPortalStrings } from '@/lib/i18n';
@@ -18,6 +18,8 @@ import { StatCard } from '@/components/portal/stat-card';
 import { StatusBadge } from '@/components/portal/status-badge';
 import { MoneyAmount } from '@/components/portal/money';
 import { LedgerHistory } from '@/components/portal/ledger-history';
+import { OweList, type OweItem } from '@/components/portal/owe-list';
+import { loadShares } from '@/features/claims/service';
 
 function contacts(value: unknown): { name: string; phone?: string }[] {
   return Array.isArray(value)
@@ -50,6 +52,31 @@ export default async function AdminMemberDetailPage({ params }: { params: Promis
       },
     }),
   ]);
+
+  const [shares, shareClaims] = await Promise.all([
+    loadShares({ memberId: member.id }, today),
+    db.assessment.findMany({
+      where: { memberId: member.id },
+      select: { id: true, claim: { select: { reference: true, subjectName: true } } },
+    }),
+  ]);
+  const claimOf = new Map(shareClaims.map((s) => [s.id, s.claim]));
+  const shareItems: OweItem[] = shares
+    .map((s) => ({
+      id: s.id,
+      reference: claimOf.get(s.id)?.reference ?? '',
+      subjectName: claimOf.get(s.id)?.subjectName ?? '',
+      amountCents: s.amountCents,
+      outstandingCents: s.outstandingCents,
+      fromAdvanceCents: s.fromAdvanceCents,
+      dueAt: s.dueAt,
+      state: s.state,
+    }))
+    .reverse();
+  const fmt = new Intl.DateTimeFormat(locale === 'sw' ? 'sw-TZ' : 'en-US', {
+    dateStyle: 'medium',
+    timeZone: 'America/Chicago',
+  });
 
   const family: { label: string; values: string[] }[] = [
     { label: t.dashboard.spouse, values: member.husbandWife ? [member.husbandWife] : [] },
@@ -122,6 +149,22 @@ export default async function AdminMemberDetailPage({ params }: { params: Promis
 
         <div className="grid gap-8 lg:grid-cols-3">
           <div className="space-y-8 lg:col-span-2">
+            {standing.missedContributions > 0 ? (
+              <p
+                role="alert"
+                className="flex items-start gap-3 rounded-3xl border-2 border-destructive/40 bg-destructive/10 p-5 text-lg"
+              >
+                <AlertTriangle className="mt-1 h-6 w-6 shrink-0 text-destructive" aria-hidden />
+                {standing.needsBoardReferral ? t.adminClaims.boardHelp : t.owe.missedWarning(standing.missedContributions)}
+              </p>
+            ) : null}
+
+            {shareItems.length > 0 ? (
+              <SectionCard title={t.adminClaims.collectionTitle} icon={<HandCoins className="h-5 w-5 text-primary" />}>
+                <OweList items={shareItems} t={t} formatDate={(d) => fmt.format(d)} />
+              </SectionCard>
+            ) : null}
+
             <SectionCard
               title={t.admin.member.history}
               description={t.admin.member.historyHelp}

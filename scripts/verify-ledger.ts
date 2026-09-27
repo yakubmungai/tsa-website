@@ -10,7 +10,7 @@
  */
 import { PrismaClient } from '@prisma/client';
 import { computeStanding } from '../src/lib/finance/balance';
-import { LEVY_ACCOUNTS } from '../src/lib/finance/ledger';
+import { outstandingFrom } from '../src/lib/finance/ledger';
 import { formatUSD } from '../src/lib/money';
 
 const db = new PrismaClient();
@@ -32,10 +32,7 @@ async function main() {
     // Compare as of when the cache was built, so the demo time machine and
     // dues-year rollover do not read as drift.
     const s = computeStanding({ entries: m.ledgerEntries, joinedAt: null, asOf: m.balance.recomputedAt });
-    const levy = m.ledgerEntries
-      .filter((e) => e.voidedAt === null && LEVY_ACCOUNTS.includes(e.account))
-      .reduce((t, e) => t + e.amountCents, 0);
-    const outstanding = Math.max(0, -levy);
+    const outstanding = outstandingFrom(m.ledgerEntries, m.balance.recomputedAt);
     const checks: [string, number, number][] = [
       ['net', s.netCents, m.balance.netCents],
       ['advance', s.advanceCents, m.balance.advanceCents],

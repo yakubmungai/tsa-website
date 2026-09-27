@@ -372,6 +372,22 @@ const sw = {
     create: 'Fungua kesi',
     convert: 'Fungua kesi kutoka taarifa hii',
   },
+  portalForms: {
+    title: 'Fomu na huduma',
+    subtitle: 'Kila unachotuma kinahifadhiwa kwenye rekodi zako na unapewa namba ya kumbukumbu.',
+    claim: { title: 'Toa taarifa ya shida/msiba', description: 'Kifo cha ndugu au mtoto, ugonjwa mkali, uhamiaji au moto.' },
+    constitution: { title: 'Saini mkataba wa Katiba', description: 'Soma na usaini Katiba ya TSA.' },
+    renewal: { title: 'Sasisha uanachama', description: 'Fanya upya mkataba wako au sasisha taarifa za familia.' },
+    submissionsTitle: 'Fomu ulizotuma',
+    submissionsEmpty: 'Hujatuma fomu yoyote bado.',
+    formTypes: {
+      MEMBERSHIP: 'Ombi la uanachama',
+      CONSTITUTION: 'Mkataba wa Katiba',
+      FUNERAL_ASSISTANCE: 'Taarifa ya msiba',
+      RENEWAL: 'Upya wa uanachama',
+    },
+    submissionStatus: { PENDING: 'Inasubiri', PROCESSING: 'Inashughulikiwa', APPROVED: 'Imekubaliwa', REJECTED: 'Haikukubaliwa' },
+  },
   admin: {
     nav: {
       today: 'Leo',
@@ -980,6 +996,22 @@ const en: PortalStrings = {
     chooseMember: 'Choose a member',
     create: 'Open case',
     convert: 'Open a case from this report',
+  },
+  portalForms: {
+    title: 'Forms and services',
+    subtitle: 'Everything you send is saved to your record and you get a reference number.',
+    claim: { title: 'Report a hardship or death', description: "A relative's or child's death, critical illness, detention or fire." },
+    constitution: { title: 'Sign the Constitution agreement', description: 'Read and sign the TSA Constitution.' },
+    renewal: { title: 'Renew membership', description: 'Renew your contract or update your family details.' },
+    submissionsTitle: 'Forms you have sent',
+    submissionsEmpty: 'You have not sent any forms yet.',
+    formTypes: {
+      MEMBERSHIP: 'Membership application',
+      CONSTITUTION: 'Constitution agreement',
+      FUNERAL_ASSISTANCE: 'Bereavement notice',
+      RENEWAL: 'Membership renewal',
+    },
+    submissionStatus: { PENDING: 'Waiting', PROCESSING: 'In progress', APPROVED: 'Accepted', REJECTED: 'Not accepted' },
   },
   admin: {
     nav: {

@@ -1,89 +1,95 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { redirect } from 'next/navigation';
-import { Navbar } from '@/components/navbar';
-import { Footer } from '@/components/footer';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { FileText, ArrowRight, ShieldCheck, HeartPulse } from 'lucide-react';
-import Link from 'next/link';
+import { CheckCircle2, Clock, FileText, HandHeart, ShieldCheck, XCircle } from 'lucide-react';
+import { db } from '@/lib/db';
+import { requireMember, checkPermission } from '@/lib/session';
+import { getLocale, getPortalStrings } from '@/lib/i18n';
+import { PageShell } from '@/components/portal/page-shell';
+import { PageHeader } from '@/components/portal/page-header';
+import { SectionCard } from '@/components/portal/section-card';
+import { ChoiceLink } from '@/components/portal/choice-button';
+import { StatusBadge, type Tone } from '@/components/portal/status-badge';
+import { EmptyState } from '@/components/portal/empty-state';
+
+const STATUS_TONE: Record<string, { tone: Tone; icon: React.ReactNode }> = {
+  PENDING: { tone: 'warning', icon: <Clock className="h-4 w-4" aria-hidden /> },
+  PROCESSING: { tone: 'info', icon: <Clock className="h-4 w-4" aria-hidden /> },
+  APPROVED: { tone: 'success', icon: <CheckCircle2 className="h-4 w-4" aria-hidden /> },
+  REJECTED: { tone: 'danger', icon: <XCircle className="h-4 w-4" aria-hidden /> },
+};
 
 export default async function PortalFormsPage() {
-  const session = await getServerSession(authOptions);
+  const ctx = await requireMember();
+  const [t, locale] = await Promise.all([getPortalStrings(), getLocale()]);
+  const canSubmit = checkPermission(ctx, 'SUBMIT_FORMS');
 
-  if (!session || !session.user) {
-    redirect('/login');
-  }
-
-  const forms = [
-    {
-      id: 'funeral',
-      title: 'Funeral Assistance Request',
-      description: 'Request financial and logistical assistance in the event of a member or family member passing.',
-      icon: HeartPulse,
-      href: '/portal/forms/funeral',
-      color: 'border-t-rose-500'
-    },
-    {
-      id: 'constitution',
-      title: 'Constitution Agreement Signature',
-      description: 'Read and digitally sign the official TSA Constitution Agreement as part of membership verification.',
-      icon: ShieldCheck,
-      href: '/constitution', // Redirect to existing constitution agreement page if it exists
-      color: 'border-t-emerald-500'
-    },
-    {
-      id: 'renewal',
-      title: 'Membership Renewal / Update',
-      description: 'Renew your 5-year membership term contract (2025-2030) or update your family records.',
-      icon: FileText,
-      href: '/membership', // Redirect to existing onboarding/renewal form
-      color: 'border-t-blue-500'
-    }
-  ];
+  const submissions = await db.formSubmission.findMany({
+    where: { memberId: ctx.memberId },
+    orderBy: { createdAt: 'desc' },
+    take: 20,
+    select: { id: true, reference: true, formType: true, status: true, createdAt: true },
+  });
+  const dateFmt = new Intl.DateTimeFormat(locale === 'sw' ? 'sw-TZ' : 'en-US', {
+    dateStyle: 'medium',
+    timeZone: 'America/Chicago',
+  });
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50">
-      <Navbar />
-
-      <main className="flex-grow max-w-5xl w-full mx-auto pt-28 pb-12 px-4 sm:px-6 lg:px-8 space-y-6">
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">TSA Digital Forms Directory</h1>
-          <p className="text-slate-500 text-sm max-w-xl mx-auto">
-            Choose a form below. Each one is saved to your TSA record when you submit it,
-            and you will be given a reference number to quote.
-          </p>
+    <PageShell width="narrow">
+      <PageHeader
+        back={{ href: '/portal', label: t.common.back }}
+        title={t.portalForms.title}
+        subtitle={t.portalForms.subtitle}
+      />
+      <div className="space-y-8">
+        <div className="grid gap-3">
+          {canSubmit ? (
+            <ChoiceLink
+              href="/portal/claims/new"
+              icon={<HandHeart className="h-6 w-6" />}
+              title={t.portalForms.claim.title}
+              description={t.portalForms.claim.description}
+            />
+          ) : null}
+          <ChoiceLink
+            href="/constitution"
+            icon={<ShieldCheck className="h-6 w-6" />}
+            title={t.portalForms.constitution.title}
+            description={t.portalForms.constitution.description}
+          />
+          <ChoiceLink
+            href="/membership"
+            icon={<FileText className="h-6 w-6" />}
+            title={t.portalForms.renewal.title}
+            description={t.portalForms.renewal.description}
+          />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6">
-          {forms.map((f) => {
-            const Icon = f.icon;
-            return (
-              <Card key={f.id} className={`shadow-md bg-white border border-slate-100 border-t-4 ${f.color} flex flex-col justify-between`}>
-                <CardHeader className="space-y-2">
-                  <div className="h-10 w-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-700">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <CardTitle className="text-md font-bold text-slate-900">{f.title}</CardTitle>
-                  <CardDescription className="text-slate-500 text-xs leading-relaxed">
-                    {f.description}
-                  </CardDescription>
-                </CardHeader>
-                <CardFooter className="pt-2">
-                  <Button asChild className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs">
-                    <Link href={f.href}>
-                      Fill Form
-                      <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-                    </Link>
-                  </Button>
-                </CardFooter>
-              </Card>
-            );
-          })}
-        </div>
-      </main>
-
-      <Footer />
-    </div>
+        <SectionCard title={t.portalForms.submissionsTitle}>
+          {submissions.length === 0 ? (
+            <EmptyState title={t.portalForms.submissionsEmpty} />
+          ) : (
+            <ul className="divide-y divide-border/60">
+              {submissions.map((s) => {
+                const st = STATUS_TONE[s.status] ?? STATUS_TONE.PENDING;
+                return (
+                  <li key={s.id} className="flex flex-wrap items-center justify-between gap-3 py-4 first:pt-0 last:pb-0">
+                    <div>
+                      <p className="text-lg font-semibold">
+                        {t.portalForms.formTypes[s.formType as keyof typeof t.portalForms.formTypes] ?? s.formType}
+                      </p>
+                      <p className="text-base text-muted-foreground">
+                        {s.reference} · {dateFmt.format(s.createdAt)}
+                      </p>
+                    </div>
+                    <StatusBadge tone={st.tone} icon={st.icon}>
+                      {t.portalForms.submissionStatus[s.status as keyof typeof t.portalForms.submissionStatus] ?? s.status}
+                    </StatusBadge>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </SectionCard>
+      </div>
+    </PageShell>
   );
 }

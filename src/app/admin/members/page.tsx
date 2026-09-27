@@ -4,6 +4,7 @@ import { requireAdmin } from '@/lib/session';
 import { getPortalStrings } from '@/lib/i18n';
 import { now } from '@/lib/clock';
 import { duesYearFor, tierFromCache } from '@/lib/finance/balance';
+import { refreshStaleBalances } from '@/lib/finance/ledger';
 import { AdminShell } from '@/components/admin/admin-shell';
 import { AdminMembersList, type DirectoryMember } from '@/components/admin-members-list';
 import { PageHeader } from '@/components/portal/page-header';
@@ -12,6 +13,8 @@ import { MoneyAmount } from '@/components/portal/money';
 
 export default async function AdminMembersPage() {
   await requireAdmin();
+  // Shares deferred into this month become owed without any write; catch up.
+  await refreshStaleBalances();
   const [t, asOf] = await Promise.all([getPortalStrings(), now()]);
   const currentDuesYear = duesYearFor(asOf);
 

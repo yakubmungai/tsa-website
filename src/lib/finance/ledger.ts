@@ -3,6 +3,7 @@ import type { LedgerAccount, LedgerEntry, LedgerEntryKind, Prisma } from '@prism
 import { db } from '@/lib/db';
 import { now } from '@/lib/clock';
 import { computeStanding, duesYearFor, type MemberStanding } from './balance';
+import { orgIsoDate } from './dates';
 
 /**
  * The only code that writes to the ledger.
@@ -118,10 +119,20 @@ export async function reverseEntry(
 /** A refusal meant for the person who asked, not an internal failure. */
 export class LedgerError extends Error {}
 
-/** Outstanding levies: what the levy accounts say the member still owes. */
-function outstandingFrom(entries: { account: string; amountCents: number; voidedAt: Date | null }[]) {
+/**
+ * Outstanding levies: what the levy accounts say the member still owes.
+ *
+ * Only entries dated on or before `asOf`: a share pushed into next month by the
+ * Art 17 cap is charged on the first of that month, and is not owed before.
+ */
+export function outstandingFrom(
+  entries: { account: string; amountCents: number; occurredAt: Date; voidedAt: Date | null }[],
+  asOf: Date
+) {
   const levy = entries
-    .filter((e) => e.voidedAt === null && LEVY_ACCOUNTS.includes(e.account as LedgerAccount))
+    .filter(
+      (e) => e.voidedAt === null && e.occurredAt <= asOf && LEVY_ACCOUNTS.includes(e.account as LedgerAccount)
+    )
     .reduce((total, e) => total + e.amountCents, 0);
   return Math.max(0, -levy);
 }
@@ -133,26 +144,62 @@ function outstandingFrom(entries: { account: string; amountCents: number; voided
  * is never observed out of step with the ledger.
  */
 export async function recomputeBalance(tx: Tx, memberId: string): Promise<void> {
+  await recomputeBalances(tx, [memberId]);
+}
+
+/** The same, for many members at once — announcing a case touches everyone. */
+export async function recomputeBalances(tx: Tx, memberIds: string[]): Promise<void> {
+  if (memberIds.length === 0) return;
   const asOf = await now();
   const entries = await tx.ledgerEntry.findMany({
-    where: { memberId },
-    select: { account: true, amountCents: true, occurredAt: true, voidedAt: true },
+    where: { memberId: { in: memberIds } },
+    select: { memberId: true, account: true, amountCents: true, occurredAt: true, voidedAt: true },
   });
-  const standing = computeStanding({ entries, joinedAt: null, asOf });
-  const data = {
-    netCents: standing.netCents,
-    advanceCents: standing.advanceCents,
-    entryFeeCents: standing.entryFeeCents,
-    duesCents: standing.duesCents,
-    duesYear: duesYearFor(asOf),
-    outstandingCents: outstandingFrom(entries),
-    recomputedAt: new Date(),
-  };
-  await tx.memberBalance.upsert({
-    where: { memberId },
-    create: { memberId, ...data },
-    update: data,
+  const byMember = new Map<string, typeof entries>();
+  for (const e of entries) {
+    if (!e.memberId) continue;
+    const list = byMember.get(e.memberId) ?? [];
+    list.push(e);
+    byMember.set(e.memberId, list);
+  }
+  for (const memberId of memberIds) {
+    const mine = byMember.get(memberId) ?? [];
+    const standing = computeStanding({ entries: mine, joinedAt: null, asOf });
+    const data = {
+      netCents: standing.netCents,
+      advanceCents: standing.advanceCents,
+      entryFeeCents: standing.entryFeeCents,
+      duesCents: standing.duesCents,
+      duesYear: duesYearFor(asOf),
+      outstandingCents: outstandingFrom(mine, asOf),
+      // The org clock, not the wall clock, so the demo time machine and the
+      // staleness check in refreshStaleBalances agree.
+      recomputedAt: asOf,
+    };
+    await tx.memberBalance.upsert({
+      where: { memberId },
+      create: { memberId, ...data },
+      update: data,
+    });
+  }
+}
+
+/**
+ * Rebuild cached balances that predate the current month.
+ *
+ * Deferred shares become owed on the first of their month without any write
+ * happening, so a cache built last month can be behind. Cheap to call on the
+ * pages that list many members.
+ */
+export async function refreshStaleBalances(): Promise<void> {
+  const asOf = await now();
+  const monthStart = new Date(`${orgIsoDate(asOf).slice(0, 7)}-01T00:00:00.000Z`);
+  const stale = await db.memberBalance.findMany({
+    where: { recomputedAt: { lt: monthStart } },
+    select: { memberId: true },
   });
+  if (stale.length === 0) return;
+  await db.$transaction((tx) => recomputeBalances(tx, stale.map((s) => s.memberId)), { timeout: 60_000 });
 }
 
 export interface MemberStandingView extends MemberStanding {
@@ -167,23 +214,49 @@ export interface MemberStandingView extends MemberStanding {
  */
 export async function getMemberStanding(
   memberId: string,
-  opts: { asOf?: Date; missedContributions?: number } = {}
+  opts: { asOf?: Date } = {}
 ): Promise<MemberStandingView> {
   const asOf = opts.asOf ?? (await now());
-  const [member, entries] = await Promise.all([
+  const [member, entries, missed] = await Promise.all([
     db.member.findUnique({ where: { id: memberId }, select: { joinedAt: true } }),
     db.ledgerEntry.findMany({
       where: { memberId },
       select: { account: true, amountCents: true, occurredAt: true, voidedAt: true },
     }),
+    countMissedContributions(memberId, asOf),
   ]);
-  const visible = entries.filter((e) => e.occurredAt <= asOf);
   const standing = computeStanding({
     entries,
     joinedAt: member?.joinedAt ?? null,
     asOf,
-    outstandingCents: outstandingFrom(visible),
-    missedContributions: opts.missedContributions,
+    outstandingCents: outstandingFrom(entries, asOf),
+    missedContributions: missed,
   });
   return { ...standing, asOf };
+}
+
+/**
+ * Art 17.4 — contributions past their deadline, unpaid, and not excused.
+ *
+ * Worked out from the ledger each time rather than stored: paying what was
+ * missed clears it at once, which is exactly "adhabu hizi zitaisha … iwapo
+ * mwanachama atarudisha michango yote aliokosa kuchangia".
+ */
+export async function countMissedContributions(memberId: string, asOf: Date): Promise<number> {
+  const overdue = await db.assessment.findMany({
+    where: { memberId, dueAt: { lt: asOf }, excusedAt: null },
+    select: { id: true },
+  });
+  if (overdue.length === 0) return 0;
+  const sums = await db.ledgerEntry.groupBy({
+    by: ['assessmentId'],
+    where: {
+      assessmentId: { in: overdue.map((a) => a.id) },
+      account: { in: LEVY_ACCOUNTS },
+      voidedAt: null,
+      occurredAt: { lte: asOf },
+    },
+    _sum: { amountCents: true },
+  });
+  return sums.filter((s) => (s._sum.amountCents ?? 0) < 0).length;
 }

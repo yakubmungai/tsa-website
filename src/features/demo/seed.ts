@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { db as defaultDb } from '@/lib/db';
 import { computeStanding, duesYearFor } from '@/lib/finance/balance';
@@ -224,6 +225,8 @@ export async function clearAllData(client: PrismaClient = defaultDb as PrismaCli
   await client.ledgerEntry.updateMany({ data: { reversesId: null } });
   await client.ledgerEntry.deleteMany({});
   await client.memberBalance.deleteMany({});
+  await client.assessment.deleteMany({});
+  await client.claim.deleteMany({});
   await client.transaction.deleteMany({});
   await client.formSubmission.deleteMany({});
   await client.actingSession.deleteMany({});
@@ -286,6 +289,9 @@ export async function seedDemoData(
     log(`  ${m.names.padEnd(24)} ${m.note}`);
   }
 
+  await seedBackgroundRoster(client, asOf, memberNumber);
+  log(`  + ${BACKGROUND_COUNT} background members, so shares come out near the real ~$20`);
+
   for (const account of DEMO_ACCOUNTS) {
     await client.user.create({
       data: {
@@ -343,4 +349,86 @@ async function writeBalance(client: PrismaClient, memberId: string, asOf: Date) 
       recomputedAt: new Date(),
     },
   });
+}
+
+// ── Background roster ───────────────────────────────────────────────────────
+
+/**
+ * How many invented members sit behind the twelve named ones.
+ *
+ * TSA has about 154 members, and every figure a leader checks depends on it:
+ * $3,000 over 12 members is $272 a head — more than anyone's savings — while
+ * over 153 it is $19.61, which the advance covers. Testing with twelve would
+ * show nothing like what members will actually see.
+ */
+export const BACKGROUND_COUNT = 142;
+
+const FIRST = ['Asha', 'Juma', 'Rehema', 'Hamisi', 'Neema', 'Said', 'Mwajuma', 'Omari', 'Halima', 'Petro',
+  'Furaha', 'Idd', 'Zuhura', 'Bakari', 'Tumaini', 'Mussa', 'Pendo', 'Salim', 'Imani', 'Ramadhani'];
+const LAST = ['Mushi', 'Swai', 'Lyimo', 'Mollel', 'Kweka', 'Mbwambo', 'Temba', 'Minja', 'Shayo', 'Massawe',
+  'Urassa', 'Kimaro', 'Mlay', 'Macha', 'Ngowi'];
+
+/**
+ * Deterministic, so a reset always gives the same roster: mostly members with
+ * the full $125, with the spread of shortfalls the real roster has.
+ */
+async function seedBackgroundRoster(client: PrismaClient, asOf: Date, lastNumber: number) {
+  const cycle = duesYearFor(asOf);
+  const joined = new Date(Date.UTC(cycle - 3, 3, 1, 18));
+  const duesPaid = new Date(Date.UTC(cycle, 3, 20, 18));
+
+  const members: Prisma.MemberCreateManyInput[] = [];
+  const entries: (Prisma.LedgerEntryCreateManyInput & { memberId: string })[] = [];
+  for (let i = 0; i < BACKGROUND_COUNT; i++) {
+    const id = randomUUID();
+    const names = `${FIRST[i % FIRST.length]} ${LAST[(i * 7) % LAST.length]} (${String(i + 13).padStart(3, '0')})`;
+    members.push({
+      id,
+      names,
+      phone: `+1713555${String(2000 + i)}`,
+      phoneE164: `+1713555${String(2000 + i)}`,
+      address: 'Houston, TX',
+      memberNumber: lastNumber + 1 + i,
+      joinedAt: joined,
+      joinedAtEstimated: false,
+      status: 'ACTIVE',
+    });
+    const band = i % 10;
+    const advance = band <= 5 ? 100 + (i % 3) * 25 : band === 6 ? 100 : band === 7 ? 45 : band === 8 ? 0 : 15;
+    const dues = band === 9 ? 0 : 25;
+    const row = (account: 'ENTRY_FEE' | 'ADVANCE_DEPOSIT' | 'ANNUAL_DUES', dollars: number, at: Date, sw: string) =>
+      entries.push({
+        memberId: id,
+        account,
+        entryKind: 'PAYMENT',
+        amountCents: dollars * 100,
+        description: sw,
+        descriptionSw: sw,
+        occurredAt: at,
+      });
+    row('ENTRY_FEE', 100, joined, 'Kiingilio');
+    if (advance > 0) row('ADVANCE_DEPOSIT', advance, joined, 'Akiba tangulizi');
+    if (dues > 0) row('ANNUAL_DUES', dues, duesPaid, 'Ada ya mwaka');
+  }
+  await client.member.createMany({ data: members });
+  await client.ledgerEntry.createMany({ data: entries });
+
+  // Cached balances in one write, computed exactly as the ledger service does.
+  const balances: Prisma.MemberBalanceCreateManyInput[] = members.map((m) => {
+    const mine = entries
+      .filter((e) => e.memberId === m.id)
+      .map((e) => ({ account: e.account as string, amountCents: e.amountCents, occurredAt: e.occurredAt as Date, voidedAt: null }));
+    const st = computeStanding({ entries: mine, joinedAt: null, asOf });
+    return {
+      memberId: m.id as string,
+      netCents: st.netCents,
+      advanceCents: st.advanceCents,
+      entryFeeCents: st.entryFeeCents,
+      duesCents: st.duesCents,
+      duesYear: st.duesYear,
+      outstandingCents: 0,
+      recomputedAt: asOf,
+    };
+  });
+  await client.memberBalance.createMany({ data: balances });
 }
