@@ -35,3 +35,6 @@ tsa-pre-demo-backup-*.json
 
 # Old design exports
 *.zip
+
+# Member-name corrections for scripts/import-roster.ts
+roster-matches.json
