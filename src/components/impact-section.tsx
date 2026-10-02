@@ -19,7 +19,7 @@ export function ImpactSection() {
           <div ref={imgRef} className={`relative ${imgVisible ? "animate-fade-in-up" : "opacity-0"}`}>
             <div className="relative aspect-[4/3] overflow-hidden rounded-3xl shadow-xl md:aspect-video">
               <Image
-                src="/images/members-community.jpeg"
+                src="/images/members-community.webp"
                 alt="Tanzanian community in US"
                 fill
                 className="object-cover object-[15%_center] transition-transform duration-500 hover:scale-105"

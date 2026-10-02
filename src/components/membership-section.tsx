@@ -20,7 +20,7 @@ export function MembershipSection() {
             {/* Image side */}
             <div className="relative min-h-[300px] lg:min-h-0 overflow-hidden">
               <Image
-                src="/images/members-join.jpeg"
+                src="/images/members-join.webp"
                 alt="Tanzanian diaspora connection"
                 fill
                 className="object-cover object-[center_18%] transition-transform duration-700 hover:scale-105"

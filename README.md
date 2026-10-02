@@ -129,6 +129,23 @@ fail `npm run lint`. Member-facing strings live in
 key for key. Tap targets are 48px, body text is 18px, and every page works at
 360px wide.
 
+### Performance
+Pages render in well under 100 ms of our own code; what members feel is
+database round trips. Keep it that way:
+- **Same region as the database.** `vercel.json` pins functions to `pdx1`
+  (Portland), next to Neon in `us-west-2`. If the database ever moves, move this
+  with it — a cross-country hop is ~70 ms *per query*.
+- **Fewer, parallel queries.** Independent lookups go in one `Promise.all`;
+  writes for many members are one statement (`recomputeBalances`), never a loop.
+- **Frames in layouts.** The navbar, footer and admin tabs live in the `portal`,
+  `admin` and `lipa` layouts, so navigation swaps only the content, and each
+  section's `loading.tsx` shows a skeleton the instant a link is tapped.
+- **Small images.** Pictures are pre-sized WebP in `public/images`; the
+  navbar logo is 9 KB. `og-image.jpg` stays under 300 KB so WhatsApp shows the
+  preview. Re-export at display size before adding a large photo.
+- `npm run dev` compiles each page on first visit (seconds). Judge speed on a
+  production build (`npm run build && npm start`) or the deployed site.
+
 ### Phone sign-in
 Members sign in with a code sent to their phone. Three steps, with a
 server-minted ticket in between:
@@ -259,6 +276,15 @@ database has not been touched. In order:
    portal shows the figures without saying who is "uko sawa" or short.
 6. Upload one real (redacted) Wells Fargo export on staging and check that
    sender names and memos are read correctly (`src/lib/finance/bank-csv.ts`).
+7. **Speed settings outside the code:**
+   - In Vercel, set `DATABASE_URL` to Neon's **pooled** connection string (the
+     host with `-pooler`). Serverless functions open many short connections;
+     the pooler makes each one cheap.
+   - Neon's free plan suspends the database after 5 idle minutes, so the first
+     visit afterwards waits ~1 second while it wakes. On a paid plan, set the
+     production branch's compute to never suspend.
+   - Confirm the Neon project really is in `us-west-2` (it is today), so the
+     `pdx1` region in `vercel.json` sits next to it.
 
 ### Turning on card payments
 

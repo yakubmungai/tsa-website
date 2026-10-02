@@ -60,7 +60,9 @@ export function Navbar() {
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6">
         <a href="/" className="flex items-center gap-3" onClick={handleLogoClick} aria-label="Tanzania Sharing Association Home">
           <img
-            src="/images/tsa-logo.png"
+            src="/images/tsa-logo-112.webp"
+            width={56}
+            height={56}
             alt="TSA Logo"
             className={`rounded-full object-cover transition-all duration-300 ${scrolled ? "h-10 w-10" : "h-14 w-14"}`}
           />

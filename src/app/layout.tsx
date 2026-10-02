@@ -24,8 +24,8 @@ export const metadata: Metadata = {
     template: '%s | TSA'
   },
   icons: {
-    icon: '/TSA_Logo-removebg-preview.png',
-    apple: '/TSA_Logo-removebg-preview.png',
+    icon: '/favicon-64.png',
+    apple: '/apple-touch-icon.png',
   },
   description: 'The Tanzania Sharing Association (TSA) is a US-wide diaspora mutual-aid society uniting Tanzanians across America through community support, cultural preservation, and shared prosperity.',
   keywords: ['Tanzania Sharing Association', 'TSA', 'Tanzanian Diaspora', 'US Tanzanians', 'Mutual Aid Society', 'Tanzanian American', 'Community Support'],
@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     type: 'website',
     images: [
       {
-        url: '/og-image.png', 
+        url: '/og-image.jpg', 
         width: 1200,
         height: 630,
         alt: 'Tanzania Sharing Association',
@@ -61,7 +61,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Tanzania Sharing Association',
     description: 'Uniting Tanzanians across the United States through mutual aid and community support.',
-    images: ['/og-image.png'],
+    images: ['/og-image.jpg'],
   },
   robots: {
     index: true,

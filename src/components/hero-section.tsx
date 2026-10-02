@@ -15,7 +15,7 @@ export function HeroSection() {
       {/* Background image with overlay */}
       <div className="absolute inset-0 z-0">
         <Image
-          src="/images/hero-bg.png?v=3"
+          src="/images/hero-bg.webp"
           alt="Tanzanian diaspora connection"
           fill
           priority

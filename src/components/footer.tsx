@@ -63,7 +63,9 @@ export function Footer() {
             <div className="flex items-center gap-4">
               <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-primary/20 p-1">
                 <img
-                  src="/images/tsa-logo-white.png"
+                  src="/images/tsa-logo-white-128.webp"
+                  width={64}
+                  height={64}
                   alt="TSA Logo"
                   className="h-full w-full rounded-full object-cover"
                 />

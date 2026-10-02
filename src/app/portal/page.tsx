@@ -33,25 +33,35 @@ export default async function PortalPage() {
   // Pure admins have no member profile of their own.
   if (ctx.actor.role === 'ADMIN' && !ctx.memberId) redirect('/admin');
 
-  const [t, locale] = await Promise.all([getPortalStrings(), getLocale()]);
   const showStatus = showComplianceStatus();
+  const memberId = ctx.memberId;
 
-  // Accounts this user can act for, so a helper can switch between them.
-  const switchable = ctx.isActing
-    ? []
-    : (
-        await db.delegation.findMany({
+  // Independent lookups go out together: each round trip to the database
+  // costs time, and a member on a slow phone feels every one of them.
+  const [t, locale, delegations, member] = await Promise.all([
+    getPortalStrings(),
+    getLocale(),
+    // Accounts this user can act for, so a helper can switch between them.
+    ctx.isActing
+      ? Promise.resolve([])
+      : db.delegation.findMany({
           where: { delegateUserId: ctx.actor.id, status: 'ACTIVE' },
           include: { ownerMember: { select: { id: true, names: true } } },
           orderBy: { createdAt: 'asc' },
+        }),
+    memberId
+      ? db.member.findUnique({
+          where: { id: memberId },
+          select: { id: true, names: true, phone: true, address: true, husbandWife: true },
         })
-      ).map((d) => ({
-        delegationId: d.id,
-        memberId: d.ownerMember.id,
-        names: d.ownerMember.names,
-      }));
+      : Promise.resolve(null),
+  ]);
+  const switchable = delegations.map((d) => ({
+    delegationId: d.id,
+    memberId: d.ownerMember.id,
+    names: d.ownerMember.names,
+  }));
 
-  const memberId = ctx.memberId;
   if (!memberId) {
     return (
       <PageShell width="narrow">
@@ -71,10 +81,6 @@ export default async function PortalPage() {
     );
   }
 
-  const member = await db.member.findUnique({
-    where: { id: memberId },
-    select: { id: true, names: true, phone: true, address: true, husbandWife: true },
-  });
   if (!member) redirect('/login');
 
   // A helper sees money only if the member agreed to it.
@@ -129,11 +135,12 @@ export default async function PortalPage() {
     );
   }
 
-  const [standing, entries, shareRows] = await Promise.all([
-    getMemberStanding(memberId),
+  const asOf = await now();
+  const [standing, entries, shareRows, pendingPayments, shares] = await Promise.all([
+    getMemberStanding(memberId, { asOf }),
     db.ledgerEntry.findMany({
       // Shares deferred to a later month (Art 17 cap) appear when they fall due.
-      where: { memberId, occurredAt: { lte: await now() } },
+      where: { memberId, occurredAt: { lte: asOf } },
       orderBy: [{ occurredAt: 'desc' }, { postedAt: 'desc' }],
       take: 100,
       select: {
@@ -151,17 +158,16 @@ export default async function PortalPage() {
       where: { memberId },
       select: { id: true, claim: { select: { reference: true, subjectName: true } } },
     }),
+    db.payment.aggregate({
+      where: { memberId, status: { in: ['REPORTED', 'MATCHED'] } },
+      _sum: { amountCents: true },
+    }),
+    loadShares({ memberId }, asOf),
   ]);
 
-  const asOf = standing.asOf;
   const canPay = checkPermission(ctx, 'MAKE_PAYMENTS');
   const payHref = canPay ? '/portal/pay' : '#owe';
-  const pendingPayments = await db.payment.aggregate({
-    where: { memberId, status: { in: ['REPORTED', 'MATCHED'] } },
-    _sum: { amountCents: true },
-  });
   const pendingCents = pendingPayments._sum.amountCents ?? 0;
-  const shares = await loadShares({ memberId }, asOf);
   const claimOf = new Map(shareRows.map((r) => [r.id, r.claim]));
   const recent = asOf.getTime() - 30 * 24 * 3600 * 1000;
   // Everything still owed, plus what was settled in the last month so the

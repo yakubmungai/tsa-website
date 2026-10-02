@@ -1,5 +1,5 @@
 import 'server-only';
-import type { LedgerAccount, LedgerEntry, LedgerEntryKind, Prisma } from '@prisma/client';
+import { Prisma, type LedgerAccount, type LedgerEntry, type LedgerEntryKind } from '@prisma/client';
 import { db } from '@/lib/db';
 import { now } from '@/lib/clock';
 import { computeStanding, duesYearFor, type MemberStanding } from './balance';
@@ -162,26 +162,31 @@ export async function recomputeBalances(tx: Tx, memberIds: string[]): Promise<vo
     list.push(e);
     byMember.set(e.memberId, list);
   }
-  for (const memberId of memberIds) {
+  const rows = memberIds.map((memberId) => {
     const mine = byMember.get(memberId) ?? [];
     const standing = computeStanding({ entries: mine, joinedAt: null, asOf });
-    const data = {
-      netCents: standing.netCents,
-      advanceCents: standing.advanceCents,
-      entryFeeCents: standing.entryFeeCents,
-      duesCents: standing.duesCents,
-      duesYear: duesYearFor(asOf),
-      outstandingCents: outstandingFrom(mine, asOf),
-      // The org clock, not the wall clock, so the demo time machine and the
-      // staleness check in refreshStaleBalances agree.
-      recomputedAt: asOf,
-    };
-    await tx.memberBalance.upsert({
-      where: { memberId },
-      create: { memberId, ...data },
-      update: data,
-    });
-  }
+    return Prisma.sql`(${memberId}, ${standing.netCents}, ${standing.advanceCents}, ${standing.entryFeeCents},
+      ${standing.duesCents}, ${duesYearFor(asOf)}, ${outstandingFrom(mine, asOf)}, ${asOf})`;
+  });
+
+  // One statement for every member, not one per member: announcing a case or
+  // the first page view of a new month touches ~155 rows, and each round trip
+  // to the database costs tens of milliseconds.
+  //
+  // recomputedAt is the org clock, not the wall clock, so the demo time machine
+  // and the staleness check in refreshStaleBalances agree.
+  await tx.$executeRaw`
+    INSERT INTO "MemberBalance"
+      ("memberId", "netCents", "advanceCents", "entryFeeCents", "duesCents", "duesYear", "outstandingCents", "recomputedAt")
+    VALUES ${Prisma.join(rows)}
+    ON CONFLICT ("memberId") DO UPDATE SET
+      "netCents" = EXCLUDED."netCents",
+      "advanceCents" = EXCLUDED."advanceCents",
+      "entryFeeCents" = EXCLUDED."entryFeeCents",
+      "duesCents" = EXCLUDED."duesCents",
+      "duesYear" = EXCLUDED."duesYear",
+      "outstandingCents" = EXCLUDED."outstandingCents",
+      "recomputedAt" = EXCLUDED."recomputedAt"`;
 }
 
 /**
