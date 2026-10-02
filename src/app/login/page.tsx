@@ -27,6 +27,7 @@ export default async function LoginPage() {
         labelEn: p.labelEn,
         labelSw: p.labelSw,
         descriptionEn: p.descriptionEn,
+        descriptionSw: p.descriptionSw,
         landing: p.landing,
       }))
     : [];
