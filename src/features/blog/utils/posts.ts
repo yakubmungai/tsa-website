@@ -2,6 +2,78 @@ import { BlogPost } from "../types";
 
 export const blogPosts: BlogPost[] = [
   {
+    slug: "summer-party-bash-2026",
+    publishedAt: "2026-07-07",
+    author: "Tanzania Sharing Association",
+    coverImage: "/images/adventure-park-2026/go-kart-track.jpg",
+    category: {
+      en: "Community Event",
+      sw: "Tukio la Jamii",
+    },
+    readTime: {
+      en: "1 min read",
+      sw: "Dk 1 kusoma",
+    },
+    title: {
+      en: "Summer Party Bash 2026",
+      sw: "Summer Party Bash 2026",
+    },
+    excerpt: {
+      en: "A day for the children and youth of TSA at Urban Air Adventure Park in Houston. Go-karts, climbing walls, trampolines, and pizza.",
+      sw: "Siku kwa ajili ya watoto na vijana wa TSA katika Urban Air Adventure Park, Houston. Magari ya mbio, kuta za kupanda, trampolini, na piza.",
+    },
+    content: {
+      en: [
+        {
+          type: "paragraph",
+          value: "On Saturday, July 5th, TSA held our Summer Party Bash at Urban Air Adventure Park in Houston, a day put on for the children and youth of our community. The invitation was open to everyone aged 1 to 20, and from 4pm to 8pm the kids had the run of the go-kart track, the climbing walls, and the trampolines. Partway through we broke for pizza and drinks in the party room, and the parents stayed at the tables catching up long after the children had gone back out.",
+        },
+        {
+          type: "paragraph",
+          value: "A day like this one happens because our members pay for it. Thank you to everyone who donated to make it possible, and to those who helped organize, drove across town, and brought their children along. We will do it again.",
+        },
+        {
+          type: "heading",
+          value: "Photos"
+        },
+        {
+          type: "gallery",
+          value: [
+            "/images/adventure-park-2026/go-kart-track.jpg",
+            "/images/adventure-park-2026/pizza-party-room.jpg",
+            "/images/adventure-park-2026/young-members-group.jpg",
+            "/images/adventure-park-2026/parents-and-volunteers.jpg",
+            "/images/adventure-park-2026/summer-party-bash-flyer.jpg"
+          ]
+        }
+      ],
+      sw: [
+        {
+          type: "paragraph",
+          value: "Jumamosi, tarehe 5 Julai, TSA ilifanya sherehe yetu ya Summer Party Bash katika Urban Air Adventure Park jijini Houston, siku iliyoandaliwa kwa ajili ya watoto na vijana wa jumuiya yetu. Mwaliko ulikuwa wazi kwa wenye umri wa mwaka 1 hadi 20, na kuanzia saa 10 jioni hadi saa 2 usiku watoto walifurahia uwanja wa magari ya mbio, kuta za kupanda, na trampolini. Katikati tulipumzika kwa piza na vinywaji katika chumba cha sherehe, na wazazi walibaki mezani wakizungumza muda mrefu baada ya watoto kurudi kucheza.",
+        },
+        {
+          type: "paragraph",
+          value: "Siku kama hii hufanyika kwa sababu wanachama wetu huigharamia. Asanteni wote mliochangia ili iwezekane, na wale mliosaidia kuandaa, mliosafiri kutoka pande zote za jiji, na mliowaleta watoto wenu. Tutarudia tena.",
+        },
+        {
+          type: "heading",
+          value: "Picha"
+        },
+        {
+          type: "gallery",
+          value: [
+            "/images/adventure-park-2026/go-kart-track.jpg",
+            "/images/adventure-park-2026/pizza-party-room.jpg",
+            "/images/adventure-park-2026/young-members-group.jpg",
+            "/images/adventure-park-2026/parents-and-volunteers.jpg",
+            "/images/adventure-park-2026/summer-party-bash-flyer.jpg"
+          ]
+        }
+      ]
+    }
+  },
+  {
     slug: "congratulations-graduates-2026",
     publishedAt: "2026-06-23",
     author: "Tanzania Sharing Association",

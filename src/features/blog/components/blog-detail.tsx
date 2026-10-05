@@ -211,7 +211,7 @@ export function BlogDetail({ post }: BlogDetailProps) {
                   >
                     <img 
                       src={block.value as string} 
-                      alt="Graduation Announcement" 
+                      alt={localizedTitle}
                       className="w-full h-auto rounded-2xl" 
                     />
                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
@@ -240,7 +240,7 @@ export function BlogDetail({ post }: BlogDetailProps) {
                         >
                           <img 
                             src={imgUrl} 
-                            alt={`Graduation announcement ${imgIdx + 1}`} 
+                            alt={`${localizedTitle} ${imgIdx + 1}`}
                             className="w-full h-auto object-cover rounded-2xl" 
                           />
                           <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
@@ -280,7 +280,7 @@ export function BlogDetail({ post }: BlogDetailProps) {
           >
             <img 
               src={selectedImage} 
-              alt="Graduation Announcement Zoomed" 
+              alt={localizedTitle}
               className="w-full h-auto max-h-[85vh] object-contain rounded-xl"
             />
           </div>
