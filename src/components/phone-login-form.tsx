@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Phone, ArrowLeft, MessageSquare } from 'lucide-react';
 import { requestPhoneCode, verifyPhoneCode } from '@/features/auth/otp-actions';
+import { usePortalStrings } from '@/components/portal/use-portal-strings';
 
 interface Candidate {
   kind: 'user' | 'claim';
@@ -29,6 +30,7 @@ type Step = 'phone' | 'code' | 'choose';
 export function PhoneLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = usePortalStrings().login;
   const callbackUrl = searchParams.get('callbackUrl') || '/portal';
 
   const [step, setStep] = useState<Step>('phone');
@@ -52,7 +54,7 @@ export function PhoneLoginForm() {
       setCode('');
       setStep('code');
     } catch {
-      toast.error('Something went wrong. Please try again.');
+      toast.error(t.failed);
     } finally {
       setLoading(false);
     }
@@ -98,7 +100,7 @@ export function PhoneLoginForm() {
         setStep('choose');
       }
     } catch {
-      toast.error('Something went wrong. Please try again.');
+      toast.error(t.failed);
     } finally {
       setLoading(false);
     }
@@ -109,8 +111,7 @@ export function PhoneLoginForm() {
       <form onSubmit={handleRequestCode} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="phone" className="text-base font-semibold text-foreground">
-            Namba yako ya simu
-            <span className="ml-2 text-base font-normal text-muted-foreground">Your phone number</span>
+            {t.phoneLabel}
           </Label>
           <div className="relative">
             <Phone className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground" aria-hidden />
@@ -128,8 +129,7 @@ export function PhoneLoginForm() {
             />
           </div>
           <p className="text-base text-muted-foreground">
-            Tutakutumia namba ya uthibitisho.
-            <span className="ml-1">We will send you a code.</span>
+            {t.phoneHelp}
           </p>
         </div>
 
@@ -138,7 +138,7 @@ export function PhoneLoginForm() {
           disabled={loading || phone.trim().length < 7}
           className="btn-shimmer h-12 w-full border-0 text-lg font-bold text-primary-foreground"
         >
-          {loading ? 'Inatuma...' : 'Nitumie namba / Send me a code'}
+          {loading ? t.sending : t.sendCode}
         </Button>
       </form>
     );
@@ -153,23 +153,22 @@ export function PhoneLoginForm() {
           className="inline-flex min-h-12 items-center gap-1.5 text-base font-medium text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Badilisha namba / Change number
+          {t.changeNumber}
         </button>
 
         <div className="space-y-3">
           <Label htmlFor="code" className="text-base font-semibold text-foreground">
-            Weka namba ya uthibitisho
-            <span className="ml-2 text-base font-normal text-muted-foreground">Enter your code</span>
+            {t.codeLabel}
           </Label>
 
           {demoCode ? (
             <div className="rounded-2xl border-2 border-warning/40 bg-warning/10 px-4 py-3">
               <p className="flex items-center gap-2 text-base font-bold text-foreground">
                 <MessageSquare className="h-5 w-5 text-warning" aria-hidden />
-                Hakuna ujumbe uliotumwa / No message was sent
+                {t.noMessageSent}
               </p>
               <p className="mt-1 text-base text-muted-foreground">
-                This is the test system. Your code is:
+                {t.testCode}
               </p>
               <p className="mt-1 font-mono text-2xl font-bold tracking-[0.3em] text-foreground">
                 {demoCode}
@@ -177,8 +176,7 @@ export function PhoneLoginForm() {
             </div>
           ) : (
             <p className="text-base text-muted-foreground">
-              Tumekutumia namba ya tarakimu 6.
-              <span className="ml-1">We sent a 6-digit code.</span>
+              {t.codeSent}
             </p>
           )}
 
@@ -207,7 +205,7 @@ export function PhoneLoginForm() {
             disabled={loading || code.length !== 6}
             className="btn-shimmer h-12 w-full border-0 text-lg font-bold text-primary-foreground"
           >
-            {loading ? 'Inathibitisha...' : 'Ingia / Sign in'}
+            {loading ? t.verifying : t.signIn}
           </Button>
         </div>
       </div>
@@ -219,10 +217,10 @@ export function PhoneLoginForm() {
     <div className="space-y-4">
       <div>
         <p className="text-base font-semibold text-foreground">
-          Akaunti zaidi ya moja zinatumia namba hii
+          {t.chooseTitle}
         </p>
         <p className="text-base text-muted-foreground">
-          More than one account uses this phone. Which one is yours?
+          {t.chooseHelp}
         </p>
       </div>
 
@@ -246,7 +244,7 @@ export function PhoneLoginForm() {
               </span>
               {candidate.kind === 'claim' && (
                 <span className="text-sm font-normal text-muted-foreground">
-                  Akaunti mpya / Set up this account
+                  {t.newAccount}
                 </span>
               )}
             </span>
@@ -260,7 +258,7 @@ export function PhoneLoginForm() {
         className="inline-flex min-h-12 items-center gap-1.5 text-base font-medium text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
-        Anza upya / Start again
+        {t.startAgain}
       </button>
     </div>
   );

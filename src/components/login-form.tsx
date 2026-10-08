@@ -10,11 +10,13 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { LogIn, Mail, Lock } from 'lucide-react';
 import { PhoneLoginForm } from '@/components/phone-login-form';
+import { usePortalStrings } from '@/components/portal/use-portal-strings';
 
 function EmailPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/portal';
+  const t = usePortalStrings().login;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -23,7 +25,7 @@ function EmailPasswordForm() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      toast.error('Please enter your email and password');
+      toast.error(t.enterBoth);
       return;
     }
     setLoading(true);
@@ -38,12 +40,12 @@ function EmailPasswordForm() {
       if (res?.error) {
         toast.error(res.error);
       } else {
-        toast.success('Logged in successfully!');
+        toast.success(t.signedIn);
         router.push(callbackUrl);
         router.refresh();
       }
     } catch {
-      toast.error('An unexpected error occurred.');
+      toast.error(t.failed);
     } finally {
       setLoading(false);
     }
@@ -53,7 +55,7 @@ function EmailPasswordForm() {
     <form onSubmit={handleLogin}>
       <div className="space-y-4 font-sans">
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t.email}</Label>
           <div className="relative">
             <Mail className="absolute left-3 top-4 h-4 w-4 text-muted-foreground" />
             <Input
@@ -69,7 +71,7 @@ function EmailPasswordForm() {
           </div>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">{t.password}</Label>
           <div className="relative">
             <Lock className="absolute left-3 top-4 h-4 w-4 text-muted-foreground" />
             <Input
@@ -89,7 +91,7 @@ function EmailPasswordForm() {
           className="btn-shimmer h-12 w-full border-0 text-base font-bold text-primary-foreground"
           disabled={loading}
         >
-          {loading ? 'Signing in...' : 'Sign In'}
+          {loading ? t.signingIn : t.signIn}
           <LogIn className="ml-2 h-4 w-4" />
         </Button>
       </div>
@@ -119,16 +121,17 @@ function Divider({ label }: { label: string }) {
  */
 export function LoginForm({ children }: { children?: React.ReactNode }) {
   const [showPassword, setShowPassword] = useState(false);
+  const t = usePortalStrings().login;
 
   return (
     <CardContent className="space-y-5">
       <Suspense
-        fallback={<div className="p-6 text-center text-base text-muted-foreground">Loading...</div>}
+        fallback={<div className="p-6 text-center text-base text-muted-foreground">{t.loading}</div>}
       >
         <PhoneLoginForm />
       </Suspense>
 
-      <Divider label="Au / Or" />
+      <Divider label={t.or} />
 
       {showPassword ? (
         <Suspense fallback={null}>
@@ -141,13 +144,13 @@ export function LoginForm({ children }: { children?: React.ReactNode }) {
           onClick={() => setShowPassword(true)}
           className="h-12 w-full text-base font-medium text-muted-foreground hover:text-foreground"
         >
-          Ingia kwa barua pepe / Sign in with email
+          {t.withEmail}
         </Button>
       )}
 
       {children ? (
         <>
-          <Divider label="Majaribio / Testing" />
+          <Divider label={t.testing} />
           {children}
         </>
       ) : null}
