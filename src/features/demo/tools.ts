@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { Resend } from 'resend';
+import { html } from '@/lib/html';
 import { db } from '@/lib/db';
 import { defineAction, actionError } from '@/lib/action';
 import { isDemoMode } from '@/lib/demo';
@@ -93,7 +95,7 @@ export const submitDemoFeedback = defineAction({
     demoOnly();
     const user = await getSessionUser();
     const count = await db.formSubmission.count({ where: { formType: 'DEMO_FEEDBACK' } });
-    await db.formSubmission.create({
+    const note = await db.formSubmission.create({
       data: {
         reference: `TSA-FB-${String(count + 1).padStart(3, '0')}-${Date.now().toString(36).slice(-3).toUpperCase()}`,
         formType: 'DEMO_FEEDBACK',
@@ -103,10 +105,39 @@ export const submitDemoFeedback = defineAction({
         data: { page: input.page, comment: input.comment, persona: user?.email ?? null, role: user?.role ?? null, at: new Date().toISOString() },
       },
     });
+    await emailFeedback({ reference: note.reference, page: input.page, comment: input.comment, persona: user?.email ?? 'not signed in' });
     revalidatePath('/admin/demo');
     return { ok: true };
   },
 });
+
+/**
+ * Send a tester's note to whoever is running the trial.
+ *
+ * Deliberately separate from every other email on the test site: those are
+ * switched off there so test forms never reach the officers, while these notes
+ * should reach one chosen inbox. Both settings exist only on the test
+ * deployment — DEMO_FEEDBACK_EMAIL (where) and DEMO_FEEDBACK_RESEND_API_KEY
+ * (the sending key). Best effort: the note is saved either way.
+ */
+async function emailFeedback(note: { reference: string; page: string; comment: string; persona: string }) {
+  const to = process.env.DEMO_FEEDBACK_EMAIL;
+  const key = process.env.DEMO_FEEDBACK_RESEND_API_KEY;
+  if (!to || !key) return;
+  try {
+    const base = (process.env.NEXT_PUBLIC_SITE_URL ?? '').replace(/\/$/, '');
+    await new Resend(key).emails.send({
+      from: 'TSA Test Site <website@mail.tansha.org>',
+      to: [to],
+      subject: `Maoni ya majaribio / Test feedback [${note.reference}]`,
+      html: html`<p><strong>${note.comment}</strong></p>
+        <p>Page: ${note.page}<br />Signed in as: ${note.persona}<br />Reference: ${note.reference}</p>
+        <p>All notes: <a href="${base}/admin/demo">${base}/admin/demo</a> (sign in as Administrator).</p>`,
+    });
+  } catch (err) {
+    console.error('[demo] feedback email failed', note.reference, err);
+  }
+}
 
 export const resolveDemoFeedback = defineAction({
   name: 'resolveDemoFeedback',
