@@ -122,9 +122,11 @@ export default async function RootLayout({
           }}
         />
         <AuthProvider>
-          <LanguageProvider initialLanguage={locale}>{children}</LanguageProvider>
+          <LanguageProvider initialLanguage={locale}>
+            {children}
+            <DemoBannerGate />
+          </LanguageProvider>
         </AuthProvider>
-        <DemoBannerGate />
         <Toaster />
         <SonnerToaster />
       </body>
