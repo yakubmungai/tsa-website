@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { useLanguage } from '@/components/language-context';
+import { usePortalStrings } from '@/components/portal/use-portal-strings';
 import { ShieldCheck, UserCheck, AlertTriangle, HeartHandshake, User, UserPlus, Wallet } from 'lucide-react';
 
 /**
@@ -39,6 +41,8 @@ const ICONS: Record<string, typeof ShieldCheck> = {
 
 export function DemoSignIn({ personas }: { personas: DemoPersonaOption[] }) {
   const router = useRouter();
+  const { language } = useLanguage();
+  const t = usePortalStrings().demo.signIn;
   const [pending, setPending] = useState<string | null>(null);
 
   const handleSignIn = async (persona: DemoPersonaOption) => {
@@ -61,13 +65,8 @@ export function DemoSignIn({ personas }: { personas: DemoPersonaOption[] }) {
   return (
     <div className="space-y-3">
       <div className="rounded-2xl border-2 border-warning/40 bg-warning/10 px-4 py-3">
-        <p className="text-base font-bold text-foreground">Ingia kwa majaribio / Test sign-in</p>
-        <p className="mt-1 text-base text-foreground">
-          Chagua aina ya mtumiaji ili kujaribu mfumo. Taarifa zote ni za kubuni.
-        </p>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          Choose a role to explore the system. All data is invented.
-        </p>
+        <p className="text-base font-bold text-foreground">{t.title}</p>
+        <p className="mt-1 text-base text-foreground">{t.body}</p>
       </div>
 
       <div className="grid gap-2">
@@ -86,17 +85,15 @@ export function DemoSignIn({ personas }: { personas: DemoPersonaOption[] }) {
               <Icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
               <span className="flex min-w-0 flex-1 flex-col gap-0.5 break-words">
                 <span className="text-base font-semibold text-foreground">
-                  {persona.labelSw}
-                  <span className="block text-sm font-normal text-muted-foreground">{persona.labelEn}</span>
+                  {language === 'sw' ? persona.labelSw : persona.labelEn}
                 </span>
-                {pending === persona.key ? (
-                  <span className="text-sm font-normal text-muted-foreground">Inaingia… / Signing in…</span>
-                ) : (
-                  <>
-                    <span className="text-sm font-normal text-foreground/80">{persona.descriptionSw}</span>
-                    <span className="text-sm font-normal text-muted-foreground">{persona.descriptionEn}</span>
-                  </>
-                )}
+                <span className="text-sm font-normal text-muted-foreground">
+                  {pending === persona.key
+                    ? t.signingIn
+                    : language === 'sw'
+                      ? persona.descriptionSw
+                      : persona.descriptionEn}
+                </span>
               </span>
             </Button>
           );

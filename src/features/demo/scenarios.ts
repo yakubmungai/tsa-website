@@ -147,7 +147,7 @@ export async function seedScenarios(db: Db, asOf: Date, log: (line: string) => v
         delegateUserId: helperUser.id,
         delegatePhoneE164: upendo.phoneE164 ?? upendo.phone ?? '',
         delegateName: upendo.names,
-        relationship: 'binti / daughter',
+        relationship: 'binti',
         permissions: ['VIEW_FINANCES', 'MAKE_PAYMENTS', 'SUBMIT_FORMS', 'EDIT_PROFILE'],
         status: 'ACTIVE',
         origin: 'ADMIN_PROVISIONED',
@@ -166,7 +166,7 @@ export async function seedScenarios(db: Db, asOf: Date, log: (line: string) => v
     subjectName: 'Elias Mwakalinga',
     eventDate: days(78),
     reportedAt: days(77),
-    description: 'Baba yangu alifariki Mbeya. / My father passed away in Mbeya.',
+    description: 'Baba yangu alifariki Mbeya.',
   });
   await approve(db, x1.id, days(76));
   await announceClaim(x1.id, null, days(75));
@@ -181,7 +181,7 @@ export async function seedScenarios(db: Db, asOf: Date, log: (line: string) => v
     subjectName: upendo.names,
     eventDate: days(48),
     reportedAt: days(47),
-    description: 'Nimelazwa hospitali wiki tatu. / In hospital for three weeks.',
+    description: 'Nimelazwa hospitali wiki tatu.',
   });
   await approve(db, x2.id, days(46));
   await announceClaim(x2.id, null, days(45));
@@ -196,7 +196,7 @@ export async function seedScenarios(db: Db, asOf: Date, log: (line: string) => v
     subjectName: 'Method Massawe',
     eventDate: days(25),
     reportedAt: days(24),
-    description: 'Baba yangu alifariki Moshi. Mazishi yalikuwa Jumamosi. / My father passed away in Moshi.',
+    description: 'Baba yangu alifariki Moshi. Mazishi yalikuwa Jumamosi.',
     filedByUserId: helperUser?.id ?? null,
     filedOnBehalf: true,
   });
@@ -217,7 +217,7 @@ export async function seedScenarios(db: Db, asOf: Date, log: (line: string) => v
     subjectName: hamisi.names,
     eventDate: days(5),
     reportedAt: days(4),
-    description: 'Upasuaji wa moyo, hospitali Methodist. / Heart surgery at Methodist hospital.',
+    description: 'Upasuaji wa moyo, hospitali Methodist.',
   });
   await approve(db, b.id, days(3));
   await announceClaim(b.id, null, days(3));
@@ -232,7 +232,7 @@ export async function seedScenarios(db: Db, asOf: Date, log: (line: string) => v
     subjectLivesInUsa: true,
     eventDate: days(2),
     reportedAt: days(1),
-    description: 'Mwanangu Peter alifariki kwa ajali ya gari. / My son Peter died in a car accident.',
+    description: 'Mwanangu Peter alifariki kwa ajali ya gari.',
     contactPhone: grace.phone,
     memorialRequested: true,
     memorialDate: addDays(asOf, 12),
@@ -246,7 +246,7 @@ export async function seedScenarios(db: Db, asOf: Date, log: (line: string) => v
     subjectName: 'Mama Kimaro',
     eventDate: days(15),
     reportedAt: days(2),
-    description: 'Mama yangu alifariki Arusha. / My mother passed away in Arusha.',
+    description: 'Mama yangu alifariki Arusha.',
   });
   await db.claim.update({ where: { id: e.id }, data: { status: 'UNDER_REVIEW', reviewStartedAt: days(1) } });
 
@@ -258,7 +258,7 @@ export async function seedScenarios(db: Db, asOf: Date, log: (line: string) => v
     subjectName: 'Anyitike Mwakyusa',
     eventDate: days(20),
     reportedAt: days(19),
-    description: 'Baba yangu alifariki Tukuyu. / My father passed away in Tukuyu.',
+    description: 'Baba yangu alifariki Tukuyu.',
   });
   const fr = await reviewClaim(f.id);
   await db.claim.update({
@@ -311,10 +311,10 @@ export async function seedScenarios(db: Db, asOf: Date, log: (line: string) => v
       data: {
         fullName: 'Rashid Mrisho',
         deceasedName: 'Juma Mrisho',
-        relation: 'Baba wa Salma Mrisho / Salma’s father',
+        relation: 'Baba wa Salma Mrisho',
         placeOfPassing: 'Tanga',
         dateTimeOfPassing: days(1).toISOString().slice(0, 16),
-        causeOfDeath: 'Ugonjwa / Illness',
+        causeOfDeath: 'Ugonjwa',
         emergencyContacts: [{ fullName: 'Rashid Mrisho', phoneNumber: '+17135550102' }],
         burialLocation: 'Tanga',
         burialDate: addDays(asOf, 3).toISOString().slice(0, 10),

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { usePortalStrings } from '@/components/portal/use-portal-strings';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,6 +20,7 @@ import { RotateCcw } from 'lucide-react';
 import { resetDemoData } from '@/features/demo/actions';
 
 export function DemoReset() {
+  const t = usePortalStrings().demo.reset;
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -28,16 +30,14 @@ export function DemoReset() {
     try {
       const res = await resetDemoData({ confirm: 'RESET' });
       if (res.success) {
-        toast.success(
-          `Demo data reset: ${res.data.members} members, ${res.data.ledgerEntries} ledger entries.`
-        );
+        toast.success(t.done(res.data.members, res.data.ledgerEntries));
         setOpen(false);
         router.refresh();
       } else {
         toast.error(res.error);
       }
     } catch {
-      toast.error('Reset failed.');
+      toast.error(t.failed);
     } finally {
       setLoading(false);
     }
@@ -48,24 +48,18 @@ export function DemoReset() {
       <AlertDialogTrigger asChild>
         <Button variant="outline" className="h-auto min-h-12 w-full gap-2 whitespace-normal border-2 border-warning/50 py-2 text-base font-semibold text-foreground hover:bg-warning/10">
           <RotateCcw className="h-4 w-4" />
-          Rudisha data ya majaribio / Reset demo data
+          {t.button}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent className="font-sans">
         <AlertDialogHeader>
-          <AlertDialogTitle>Reset the demo data?</AlertDialogTitle>
+          <AlertDialogTitle>{t.confirmTitle}</AlertDialogTitle>
           <AlertDialogDescription className="space-y-2 text-base text-muted-foreground">
-            <span className="block">
-              Every demo member, transaction and change made while testing will be
-              deleted and rebuilt from scratch.
-            </span>
-            <span className="block font-medium text-foreground">
-              Kila kitu kilichobadilishwa wakati wa majaribio kitafutwa na kuanza upya.
-            </span>
+            <span className="block">{t.confirmBody}</span>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={loading}>{t.cancel}</AlertDialogCancel>
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault();
@@ -74,7 +68,7 @@ export function DemoReset() {
             disabled={loading}
             className="bg-warning text-warning-foreground hover:bg-warning/90"
           >
-            {loading ? 'Resetting...' : 'Reset'}
+            {loading ? t.resetting : t.confirm}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

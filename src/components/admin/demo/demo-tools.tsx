@@ -8,16 +8,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { resolveDemoFeedback, setDemoClock, simulateZelleDeposit } from '@/features/demo/tools';
 import { cn } from '@/lib/utils';
+import { usePortalStrings } from '@/components/portal/use-portal-strings';
 
 /** "Songa mbele" — the time machine. */
 export function DemoClock({ testDate, moved }: { testDate: string; moved: boolean }) {
+  const t = usePortalStrings().demo.guide;
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   function go(addDays: number | null) {
     startTransition(async () => {
       const res = await setDemoClock({ addDays });
       if (res.success) {
-        toast.success(`Tarehe ya majaribio / Test date: ${res.data.today}`);
+        toast.success(t.toastDate(res.data.today));
         router.refresh();
       } else toast.error(res.error);
     });
@@ -27,8 +29,8 @@ export function DemoClock({ testDate, moved }: { testDate: string; moved: boolea
       <p className="flex items-center gap-2 text-lg">
         <Clock className="h-5 w-5 text-primary" aria-hidden />
         <span>
-          Leo kwenye majaribio / Test date: <strong>{testDate}</strong>
-          {moved ? <span className="ml-2 text-muted-foreground">(imesogezwa / moved)</span> : null}
+          {t.testDate} <strong>{testDate}</strong>
+          {moved ? <span className="ml-2 text-muted-foreground">{t.moved}</span> : null}
         </span>
       </p>
       <div className="flex flex-wrap gap-2">
@@ -41,7 +43,7 @@ export function DemoClock({ testDate, moved }: { testDate: string; moved: boolea
             className="btn-shimmer inline-flex min-h-12 items-center gap-2 rounded-xl px-4 text-base font-bold text-primary-foreground disabled:opacity-50"
           >
             <FastForward className="h-5 w-5" aria-hidden />
-            Songa mbele siku {d} / +{d} days
+            {t.forward(d)}
           </button>
         ))}
         {moved ? (
@@ -52,7 +54,7 @@ export function DemoClock({ testDate, moved }: { testDate: string; moved: boolea
             className="inline-flex min-h-12 items-center gap-2 rounded-xl border-2 border-border px-4 text-base font-semibold"
           >
             <RotateCcw className="h-5 w-5" aria-hidden />
-            Rudi leo / Back to today
+            {t.backToday}
           </button>
         ) : null}
       </div>
@@ -62,6 +64,7 @@ export function DemoClock({ testDate, moved }: { testDate: string; moved: boolea
 
 /** "Simulate a Zelle deposit" — it appears on Malipo for the Treasurer to match. */
 export function SimulateDeposit({ members }: { members: { id: string; names: string }[] }) {
+  const t = usePortalStrings().demo.guide;
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [memberId, setMemberId] = useState(members[0]?.id ?? '');
@@ -71,7 +74,7 @@ export function SimulateDeposit({ members }: { members: { id: string; names: str
     startTransition(async () => {
       const res = await simulateZelleDeposit({ memberId, amount, withReference });
       if (res.success) {
-        toast.success('Imeingia benki — angalia Malipo / Deposit added — see Payments');
+        toast.success(t.deposited);
         router.refresh();
       } else toast.error(res.error);
     });
@@ -81,7 +84,7 @@ export function SimulateDeposit({ members }: { members: { id: string; names: str
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="simMember" className="text-base">
-            Mwanachama / Member
+            {t.member}
           </Label>
           <select
             id="simMember"
@@ -98,14 +101,14 @@ export function SimulateDeposit({ members }: { members: { id: string; names: str
         </div>
         <div className="space-y-2">
           <Label htmlFor="simAmount" className="text-base">
-            Kiasi / Amount ($)
+            {t.amount}
           </Label>
           <Input id="simAmount" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} className="h-12 text-lg" />
         </div>
       </div>
       <label className="flex min-h-12 items-center gap-3 text-base">
         <input type="checkbox" checked={withReference} onChange={(e) => setWithReference(e.target.checked)} className="h-5 w-5 accent-[hsl(var(--primary))]" />
-        Aliandika TSA-namba kwenye memo / Wrote their TSA reference in the memo
+        {t.withReference}
       </label>
       <button
         type="button"
@@ -113,7 +116,7 @@ export function SimulateDeposit({ members }: { members: { id: string; names: str
         disabled={pending || !memberId}
         className="btn-shimmer min-h-12 w-full rounded-xl text-base font-bold text-primary-foreground disabled:opacity-50"
       >
-        Tuma Zelle ya majaribio / Simulate a Zelle deposit
+        {t.simulate}
       </button>
     </div>
   );
@@ -121,8 +124,7 @@ export function SimulateDeposit({ members }: { members: { id: string; names: str
 
 export interface Scenario {
   id: string;
-  sw: string;
-  en: string;
+  title: string;
   signInAs: string;
   steps: string[];
   expect: string;
@@ -130,6 +132,7 @@ export interface Scenario {
 
 /** The guided scenarios, with a tick per scenario remembered on this device. */
 export function ScenarioChecklist({ scenarios }: { scenarios: Scenario[] }) {
+  const t = usePortalStrings().demo.guide;
   const [done, setDone] = useState<Record<string, boolean>>({});
   useEffect(() => {
     try {
@@ -155,7 +158,7 @@ export function ScenarioChecklist({ scenarios }: { scenarios: Scenario[] }) {
   return (
     <div className="space-y-4">
       <p className="text-base font-semibold text-muted-foreground">
-        {count} / {scenarios.length} zimekamilika / completed
+        {t.completed(count, scenarios.length)}
       </p>
       <ol className="space-y-4">
         {scenarios.map((s, i) => (
@@ -174,12 +177,9 @@ export function ScenarioChecklist({ scenarios }: { scenarios: Scenario[] }) {
                 {done[s.id] ? <Check className="h-5 w-5" aria-hidden /> : i + 1}
               </button>
               <div className="min-w-0 space-y-2 break-words">
-                <p className="text-lg font-semibold">
-                  {s.sw}
-                  <span className="block text-base font-normal text-muted-foreground">{s.en}</span>
-                </p>
+                <p className="text-lg font-semibold">{s.title}</p>
                 <p className="text-base">
-                  <span className="font-semibold">Ingia kama / Sign in as:</span> {s.signInAs}
+                  <span className="font-semibold">{t.signInAs}</span> {s.signInAs}
                 </p>
                 <ol className="list-decimal space-y-1 pl-5 text-base">
                   {s.steps.map((step) => (
@@ -187,7 +187,7 @@ export function ScenarioChecklist({ scenarios }: { scenarios: Scenario[] }) {
                   ))}
                 </ol>
                 <p className="rounded-xl bg-muted/60 p-3 text-base">
-                  <span className="font-semibold">Unapaswa kuona / You should see:</span> {s.expect}
+                  <span className="font-semibold">{t.youShouldSee}</span> {s.expect}
                 </p>
               </div>
             </div>
@@ -199,6 +199,7 @@ export function ScenarioChecklist({ scenarios }: { scenarios: Scenario[] }) {
 }
 
 export function ResolveFeedback({ id }: { id: string }) {
+  const t = usePortalStrings().demo.guide;
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   return (
@@ -214,7 +215,7 @@ export function ResolveFeedback({ id }: { id: string }) {
       className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-semibold hover:bg-muted"
     >
       <Check className="h-4 w-4" aria-hidden />
-      Imeshughulikiwa / Done
+      {t.done}
     </button>
   );
 }

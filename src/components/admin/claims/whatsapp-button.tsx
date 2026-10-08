@@ -90,7 +90,7 @@ export function WhatsAppButton({
           <DialogTitle className="font-serif text-2xl">{t.adminClaims.message}</DialogTitle>
           {demo ? (
             <DialogDescription className="text-base">
-              Majaribio: ujumbe hautumwi. / Test mode: the message is not sent.
+              {t.demo.whatsappNote}
             </DialogDescription>
           ) : null}
         </DialogHeader>
