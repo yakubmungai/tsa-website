@@ -110,7 +110,7 @@ export default async function AdminMemberDetailPage({ params }: { params: Promis
         actions={
           <>
             <AdminEditMember member={member} />
-            <AdminDeleteMember memberId={member.id} memberNames={member.names} />
+            {member.archivedAt ? null : <AdminDeleteMember memberId={member.id} memberNames={member.names} />}
           </>
         }
       />

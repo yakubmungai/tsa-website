@@ -153,6 +153,10 @@ export function AdminSubmissionsList({ initialSubmissions }: { initialSubmission
   });
   const formLabel = (type: string) =>
     t.adminForms.types[type as keyof typeof t.adminForms.types] ?? type;
+  // A field we have no label for still reads as words: "burialPlace" → "Burial place".
+  const fieldLabel = (key: string) =>
+    t.adminForms.fieldLabels[key as keyof typeof t.adminForms.fieldLabels] ??
+    key.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()).replace(/ (\w)/g, (_, c: string) => ` ${c.toLowerCase()}`);
   const applicantName = (sub: Submission, fallback: string) =>
     sub.memberNames || `${sub.data.firstName || ''} ${sub.data.lastName || fallback}`.trim();
 
@@ -214,7 +218,7 @@ export function AdminSubmissionsList({ initialSubmissions }: { initialSubmission
                       if (typeof val === 'object') return null; // skip sub-objects for neatness
                       return (
                         <div key={key} className="grid grid-cols-[minmax(0,8rem)_1fr] gap-3">
-                          <dt className="truncate font-semibold text-muted-foreground">{key}</dt>
+                          <dt className="truncate font-semibold text-muted-foreground">{fieldLabel(key)}</dt>
                           <dd className="break-words text-foreground">{String(val)}</dd>
                         </div>
                       );

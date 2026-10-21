@@ -12,6 +12,8 @@
  * without touching the page.
  */
 
+import { formatUSD, parseUSDToCents } from '@/lib/money';
+
 export type BroadcastKind =
   | 'MSIBA'
   | 'PAYMENT_REMINDER'
@@ -41,6 +43,16 @@ export interface BroadcastInput {
 const HEADER = '*TANZANIA SHARING ASSOCIATION (TSA)*';
 const DIVIDER = '— — —';
 
+/** "19.48" → "$19.48"; text that is not an amount is kept as typed. */
+function asMoney(value: string | undefined): string | undefined {
+  if (!value?.trim()) return value;
+  try {
+    return formatUSD(parseUSDToCents(value));
+  } catch {
+    return value;
+  }
+}
+
 function line(value: string | undefined, render: (v: string) => string): string[] {
   return value && value.trim() ? [render(value.trim())] : [];
 }
@@ -49,7 +61,8 @@ function line(value: string | undefined, render: (v: string) => string): string[
  * WhatsApp understands *bold* and _italic_ only — not markdown headings, which
  * would render as literal hashes.
  */
-export function composeBroadcast(input: BroadcastInput): string {
+export function composeBroadcast(raw: BroadcastInput): string {
+  const input = { ...raw, amount: asMoney(raw.amount) };
   const parts: string[] = [HEADER];
 
   switch (input.kind) {

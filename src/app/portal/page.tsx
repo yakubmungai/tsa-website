@@ -27,7 +27,8 @@ import { OweList, type OweItem } from '@/components/portal/owe-list';
 import { loadShares } from '@/features/claims/service';
 import { HelpButton } from '@/components/portal/help-button';
 
-export default async function PortalPage() {
+export default async function PortalPage({ searchParams }: { searchParams: Promise<{ denied?: string }> }) {
+  const { denied } = await searchParams;
   const ctx = await getEffectiveContext();
   if (!ctx) redirect('/login');
 
@@ -89,18 +90,33 @@ export default async function PortalPage() {
   const canSubmit = checkPermission(ctx, 'SUBMIT_FORMS');
   const firstName = member.names.split(' ')[0];
 
+  // Set by requireAdmin / requirePermission when they turn someone away.
+  const deniedMessage =
+    denied === 'admin' ? t.dashboard.deniedAdmin : denied === 'permission' ? t.dashboard.deniedPermission : null;
+
   const header = (
-    <PageHeader
-      eyebrow={t.dashboard.subtitle}
-      title={t.dashboard.greeting(ctx.isActing ? member.names : firstName)}
-      subtitle={ctx.isActing ? t.dashboard.actingFor(member.names) : undefined}
-      actions={
-        <>
-          <TextSizeToggle />
-          <HelpButton />
-        </>
-      }
-    />
+    <>
+      <PageHeader
+        eyebrow={t.dashboard.subtitle}
+        title={t.dashboard.greeting(ctx.isActing ? member.names : firstName)}
+        subtitle={ctx.isActing ? t.dashboard.actingFor(member.names) : undefined}
+        actions={
+          <>
+            <TextSizeToggle />
+            <HelpButton />
+          </>
+        }
+      />
+      {deniedMessage ? (
+        <p
+          role="status"
+          className="mb-6 flex items-start gap-3 rounded-3xl border-2 border-warning/40 bg-warning/10 p-5 text-lg"
+        >
+          <AlertTriangle className="mt-1 h-6 w-6 shrink-0 text-warning-foreground" aria-hidden />
+          {deniedMessage}
+        </p>
+      ) : null}
+    </>
   );
 
   const quickLinks = (
@@ -208,7 +224,9 @@ export default async function PortalPage() {
     },
     owe: {
       headline: t.status.owe(formatUSD(standing.outstandingCents)),
-      body: nextDue ? t.status.oweBy(dateFmt.format(nextDue.dueAt)) : t.status.oweBody,
+      body: nextDue
+        ? (nextDue.state === 'OVERDUE' ? t.status.overdueSince : t.status.oweBy)(dateFmt.format(nextDue.dueAt))
+        : t.status.oweBody,
       detail: pendingCents > 0 ? t.status.pending(formatUSD(pendingCents)) : nextDue ? t.status.oweBody : undefined,
       action: { href: payHref, label: t.status.payNow },
     },

@@ -7,6 +7,12 @@ import {
 } from './templates';
 
 describe('composeBroadcast', () => {
+  it('writes a typed amount as dollars', () => {
+    const message = composeBroadcast({ kind: 'PAYMENT_REMINDER', amount: '19.5' });
+    expect(message).toContain('*$19.50*');
+    expect(composeBroadcast({ kind: 'PAYMENT_REMINDER', amount: 'kama ilivyotangazwa' })).toContain('kama ilivyotangazwa');
+  });
+
   it('puts Swahili first and English below', () => {
     const message = composeBroadcast({
       kind: 'MSIBA',

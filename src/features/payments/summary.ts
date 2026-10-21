@@ -19,11 +19,12 @@ export async function paySummary(memberId: string) {
       select: { id: true, amountCents: true, paidOn: true },
     }),
   ]);
-  // Owed contributions first; otherwise, once the roster is confirmed, what it
-  // takes to restore the $125 (rounded up so one payment covers a few cases).
+  // Owed contributions first, to the cent — a member owing $29.22 should not
+  // be asked for $30. Otherwise, once the roster is confirmed, what it takes to
+  // restore the $125 (rounded up so one payment covers a few cases).
   const suggestedCents =
     owing.outstandingCents > 0
-      ? Math.ceil(owing.outstandingCents / 100) * 100
+      ? owing.outstandingCents
       : showComplianceStatus()
         ? suggestedTopUpCents(owing.standing)
         : 0;
