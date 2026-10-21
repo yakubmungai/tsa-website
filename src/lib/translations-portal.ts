@@ -53,6 +53,16 @@ const sw = {
     call: 'Piga simu',
     whatsapp: 'Tuma WhatsApp',
   },
+  errors: {
+    title: 'Kuna hitilafu',
+    body: 'Samahani, ukurasa huu haujafunguka. Hakuna kilichopotea. Jaribu tena, au wasiliana nasi.',
+    retry: 'Jaribu tena',
+    notFoundTitle: 'Ukurasa haupo',
+    notFoundBody: 'Ukurasa uliouomba haupatikani. Huenda kiungo kimebadilika.',
+    toPortal: 'Rudi kwenye akaunti yangu',
+    toAdmin: 'Rudi kwenye Kituo cha Viongozi',
+    reference: (digest: string) => `Namba ya kumbukumbu: ${digest}`,
+  },
   status: {
     ok: 'Uko sawa',
     okBody: 'Una $125 kwenye akaunti na hudaiwi chochote.',
@@ -967,6 +977,16 @@ const en: PortalStrings = {
     body: 'The Secretary/Reviewer can help you by phone or WhatsApp.',
     call: 'Call',
     whatsapp: 'Send a WhatsApp',
+  },
+  errors: {
+    title: 'Something went wrong',
+    body: 'Sorry, this page did not load. Nothing has been lost. Try again, or contact us.',
+    retry: 'Try again',
+    notFoundTitle: 'Page not found',
+    notFoundBody: 'The page you asked for does not exist. The link may have changed.',
+    toPortal: 'Back to my account',
+    toAdmin: "Back to the Leaders' Centre",
+    reference: (digest: string) => `Reference: ${digest}`,
   },
   status: {
     ok: "You're all set",

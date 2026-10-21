@@ -13,10 +13,10 @@ import { Phone, RotateCcw, Home } from 'lucide-react';
  */
 export default function Error({
   error,
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
   useEffect(() => {
     console.error('[page error]', error.digest, error);
@@ -38,7 +38,7 @@ export default function Error({
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <Button
-          onClick={reset}
+          onClick={() => retry()}
           className="h-12 gap-2 bg-emerald-600 px-6 text-base font-semibold text-white hover:bg-emerald-700"
         >
           <RotateCcw className="h-4 w-4" />
