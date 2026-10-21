@@ -1,7 +1,9 @@
+import { createHash } from 'node:crypto';
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { db } from './db';
 import { verifyPassword } from './crypto';
+import { consumeAll, POLICIES } from './rate-limit';
 import { isDemoMode, isDemoPersona, DEMO_PERSONAS } from './demo';
 
 // Fail loudly rather than falling back to a hardcoded secret. A predictable
@@ -22,6 +24,15 @@ const DUMMY_PASSWORD_HASH =
 
 const INVALID_CREDENTIALS = 'Invalid email or password';
 
+/** The caller's IP, hashed with the audit pepper — a rate-limit key, never stored raw. */
+function ipKey(headers: Record<string, unknown> | undefined): string {
+  const forwarded = headers?.['x-forwarded-for'];
+  const ip = (typeof forwarded === 'string' ? forwarded.split(',')[0]?.trim() : undefined) ||
+    (typeof headers?.['x-real-ip'] === 'string' ? (headers['x-real-ip'] as string) : undefined);
+  if (!ip) return 'unknown-ip';
+  return createHash('sha256').update(`${process.env.AUDIT_IP_PEPPER ?? ''}:${ip}`).digest('hex').slice(0, 32);
+}
+
 const providers: any[] = [
   CredentialsProvider({
     name: 'Credentials',
@@ -29,13 +40,24 @@ const providers: any[] = [
       email: { label: 'Email', type: 'text' },
       password: { label: 'Password', type: 'password' },
     },
-    async authorize(credentials) {
+    async authorize(credentials, req) {
       if (!credentials?.email || !credentials?.password) {
         throw new Error('Please enter an email and password');
       }
+      const email = credentials.email.toLowerCase();
+
+      // Admin accounts sign in here, so password guessing is capped per
+      // account and per connection, before any hash is checked.
+      const limit = await consumeAll([
+        { policy: POLICIES.loginPasswordEmail, key: email },
+        { policy: POLICIES.loginPasswordIp, key: ipKey(req?.headers) },
+      ]);
+      if (!limit.allowed) {
+        throw new Error('Too many sign-in attempts. Please wait 15 minutes and try again.');
+      }
 
       const user = await db.user.findUnique({
-        where: { email: credentials.email.toLowerCase() },
+        where: { email },
         include: { member: true },
       });
 
