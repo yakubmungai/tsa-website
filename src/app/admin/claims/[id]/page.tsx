@@ -12,7 +12,7 @@ import { CLAIM_TYPES, type ClaimTypeKey, type StandingTier } from '@/lib/finance
 import { benefitFor, eligiblePayers, splitLevy } from '@/lib/finance/levy';
 import type { EligibilityResult } from '@/lib/finance/eligibility';
 import { collectedCents, effectiveType, loadShares, paidOutCents, reviewClaim } from '@/features/claims/service';
-import { announcementMessage, reminderMessage } from '@/features/claims/messages';
+import { PAY_LINK_PLACEHOLDER, announcementMessage, reminderMessage } from '@/features/claims/messages';
 import { AdminShell } from '@/components/admin/admin-shell';
 import { Stepper } from '@/components/admin/claims/stepper';
 import { ClaimChecklist } from '@/components/admin/claims/checklist';
@@ -20,7 +20,7 @@ import { DecisionPanel } from '@/components/admin/claims/decision-panel';
 import { AnnouncePanel } from '@/components/admin/claims/announce-panel';
 import { CollectionsTable, type CollectionRow } from '@/components/admin/claims/collections-table';
 import { PayoutPanel } from '@/components/admin/claims/payout-panel';
-import { PAY_LINK_PLACEHOLDER, WhatsAppButton } from '@/components/admin/claims/whatsapp-button';
+import { WhatsAppButton } from '@/components/admin/claims/whatsapp-button';
 import { PageHeader } from '@/components/portal/page-header';
 import { SectionCard } from '@/components/portal/section-card';
 import { StatusBadge } from '@/components/portal/status-badge';

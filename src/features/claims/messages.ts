@@ -9,6 +9,13 @@
 
 const HEADER = '*TANZANIA SHARING ASSOCIATION (TSA)*';
 
+/**
+ * Stands in for a member's personal pay link until the message is opened.
+ * Lives here, not in the client WhatsApp button, so server pages that build
+ * reminders get the string itself rather than a client-module reference.
+ */
+export const PAY_LINK_PLACEHOLDER = '{{PAY_LINK}}';
+
 export interface AnnouncementInput {
   type: 'MEMBER_DEATH' | 'CHILD_DEATH' | 'RELATIVE_DEATH' | 'HARDSHIP';
   reference: string;

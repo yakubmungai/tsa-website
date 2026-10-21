@@ -13,9 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { usePortalStrings } from '@/components/portal/use-portal-strings';
 import { cn } from '@/lib/utils';
-
-/** Stands in for a member's personal pay link until the message is opened. */
-export const PAY_LINK_PLACEHOLDER = '{{PAY_LINK}}';
+import { PAY_LINK_PLACEHOLDER } from '@/features/claims/messages';
 
 /** Swap the placeholder for a freshly made pay link for this member. */
 export async function withPayLink(message: string, memberId?: string): Promise<string> {
