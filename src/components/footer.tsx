@@ -267,7 +267,7 @@ export function Footer() {
             </a>
           </p>
           <div className="flex gap-6 text-xs text-background/60">
-            <a href="#" onClick={(e) => handleComingSoon(e, t.privacy)} className="hover:text-primary transition-colors">{t.privacy}</a>
+            <a href="/privacy" className="hover:text-primary transition-colors">{t.privacy}</a>
             <a href="/constitution" className="hover:text-primary transition-colors">{t.constitution}</a>
             <a href="#" onClick={(e) => handleComingSoon(e, t.bylaws)} className="hover:text-primary transition-colors">{t.bylaws}</a>
           </div>
