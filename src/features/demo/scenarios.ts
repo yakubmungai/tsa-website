@@ -271,7 +271,9 @@ export async function seedScenarios(db: Db, asOf: Date, log: (line: string) => v
       benefitCents: 0,
       levyPoolCents: 0,
       approvedAt: days(18),
-      decisionNote: 'Mwanachama mpya (chini ya miezi 6) — msaada wa hiari, Ibara 4.5.',
+      // One column, read in both languages.
+      decisionNote:
+        'Mwanachama mpya (chini ya miezi 6) — msaada wa hiari, Ibara 4.5. / New member (under 6 months) — voluntary support, Art 4.5.',
     },
   });
 
@@ -282,7 +284,8 @@ export async function seedScenarios(db: Db, asOf: Date, log: (line: string) => v
       {
         memberId: joseph.id,
         method: 'ZELLE',
-        amountCents: Math.ceil((jShare?.outstandingCents ?? 2000) / 100) * 100,
+        // His share came out of savings (nothing outstanding), so he pays it back in.
+        amountCents: Math.ceil((jShare?.outstandingCents || jShare?.amountCents || 2000) / 100) * 100,
         paidOn: days(1),
         payerName: joseph.names,
         memo: 'TSA-' + (joseph.memberNumber ?? ''),

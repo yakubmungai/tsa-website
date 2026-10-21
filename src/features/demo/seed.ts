@@ -55,8 +55,10 @@ export const DEMO_MEMBERS: DemoMemberSpec[] = [
     siblings: ['Salma Mrisho'],
     witnesses: [{ name: 'Baraka Mwakalinga', phone: '+17135550103' }],
     nextOfKin: [{ name: 'Rashid Mrisho', phone: '+17135550102' }],
-    ledger: { advance: 100, registration: 100, membership: 25 },
-    note: 'FULL tier — holds the $125 minimum. Entitled to $10,000 / $3,000.',
+    // $150, not exactly $125: the seeded Hamisi case takes her share from
+    // savings, and she must still hold the minimum afterwards.
+    ledger: { advance: 150, registration: 100, membership: 25 },
+    note: 'FULL tier — stays above the $125 minimum after her shares. Entitled to $10,000 / $3,000.',
   },
   {
     names: 'Baraka Mwakalinga',
@@ -159,7 +161,8 @@ export const DEMO_MEMBERS: DemoMemberSpec[] = [
     address: '2300 Kirby Dr, Houston, TX 77019',
     husbandWife: 'Elia Mwakyusa',
     parents: ['Anyitike Mwakyusa'],
-    ledger: { advance: 100, registration: 100, membership: 25 },
+    // Above the minimum after the seeded shares, so her story stays the six-month wait.
+    ledger: { advance: 150, registration: 100, membership: 25 },
     joinedMonthsAgo: 2,
     note: 'New member (joined 2 months ago) — her cases are kihiari until 6 months (Art 4.5).',
   },
@@ -423,19 +426,19 @@ async function seedBackgroundRoster(client: PrismaClient, asOf: Date, lastNumber
     const band = i % 10;
     const advance = band <= 5 ? 100 + (i % 3) * 25 : band === 6 ? 100 : band === 7 ? 45 : band === 8 ? 0 : 15;
     const dues = band === 9 ? 0 : 25;
-    const row = (account: 'ENTRY_FEE' | 'ADVANCE_DEPOSIT' | 'ANNUAL_DUES', dollars: number, at: Date, sw: string) =>
+    const row = (account: 'ENTRY_FEE' | 'ADVANCE_DEPOSIT' | 'ANNUAL_DUES', dollars: number, at: Date, en: string, sw: string) =>
       entries.push({
         memberId: id,
         account,
         entryKind: 'PAYMENT',
         amountCents: dollars * 100,
-        description: sw,
+        description: en,
         descriptionSw: sw,
         occurredAt: at,
       });
-    row('ENTRY_FEE', 100, joined, 'Kiingilio');
-    if (advance > 0) row('ADVANCE_DEPOSIT', advance, joined, 'Akiba tangulizi');
-    if (dues > 0) row('ANNUAL_DUES', dues, duesPaid, 'Ada ya mwaka');
+    row('ENTRY_FEE', 100, joined, 'Entry fee', 'Kiingilio');
+    if (advance > 0) row('ADVANCE_DEPOSIT', advance, joined, 'Advance deposit', 'Akiba tangulizi');
+    if (dues > 0) row('ANNUAL_DUES', dues, duesPaid, 'Annual dues', 'Ada ya mwaka');
   }
   await client.member.createMany({ data: members });
   await client.ledgerEntry.createMany({ data: entries });
