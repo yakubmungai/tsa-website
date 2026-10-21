@@ -8,6 +8,7 @@ import { showComplianceStatus } from '@/lib/rollout';
 import { getMemberStanding } from '@/lib/finance/ledger';
 import { heroStateFor } from '@/lib/finance/hero';
 import { suggestedTopUpCents } from '@/lib/finance/balance';
+import { entryCutoff } from '@/lib/finance/dates';
 import { formatUSD } from '@/lib/money';
 import { now } from '@/lib/clock';
 import { AccountSwitcher } from '@/components/account-switcher';
@@ -140,7 +141,7 @@ export default async function PortalPage() {
     getMemberStanding(memberId, { asOf }),
     db.ledgerEntry.findMany({
       // Shares deferred to a later month (Art 17 cap) appear when they fall due.
-      where: { memberId, occurredAt: { lte: asOf } },
+      where: { memberId, occurredAt: { lte: entryCutoff(asOf) } },
       orderBy: [{ occurredAt: 'desc' }, { postedAt: 'desc' }],
       take: 100,
       select: {

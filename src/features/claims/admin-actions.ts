@@ -323,6 +323,7 @@ export const recordSharePayment = defineAction({
   guard: 'admin',
   schema: sharePaymentSchema,
   async handler(input, ctx): Promise<{ ok: true }> {
+    if (input.paidOn > orgIsoDate(await now())) actionError('The date cannot be in the future.');
     const share = await db.$transaction(async (tx) => {
       const s = await applyToShare(tx, {
         assessmentId: input.assessmentId,
@@ -400,6 +401,7 @@ export const recordPayout = defineAction({
     if (input.kind === 'BENEFIT_PAYOUT' && !required.every((k) => conditions[k])) {
       actionError('Confirm all the Art 18.9 conditions first.');
     }
+    if (input.paidOn > orgIsoDate(await now())) actionError('The date cannot be in the future.');
 
     const paid = await db.$transaction(async (tx) => {
       await tx.ledgerEntry.create({

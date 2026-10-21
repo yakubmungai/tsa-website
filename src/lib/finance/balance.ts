@@ -11,6 +11,7 @@ import {
   type BenefitEntitlement,
   type StandingTier,
 } from './constants';
+import { entryCutoff } from './dates';
 
 /**
  * A member's financial position, derived from the ledger.
@@ -155,7 +156,8 @@ export function computeStanding(input: StandingInput): MemberStanding {
   const { asOf } = input;
   // Only what had happened by `asOf`. Art 18.9 tiers are taken on the date of
   // the event, so a top-up made afterwards must not raise the tier.
-  const entries = input.entries.filter((e) => e.occurredAt <= asOf);
+  const cutoff = entryCutoff(asOf);
+  const entries = input.entries.filter((e) => e.occurredAt <= cutoff);
 
   const duesYear = duesYearFor(asOf);
 

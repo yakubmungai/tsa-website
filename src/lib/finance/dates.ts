@@ -23,6 +23,19 @@ export function orgDateFromInput(value: string): Date {
   return new Date(`${value}T18:00:00.000Z`);
 }
 
+/**
+ * The latest `occurredAt` that has happened by `asOf`.
+ *
+ * Typed dates are stored at noon Central, so a payment dated today sits later
+ * than "now" every morning. Counting up to today's stamp makes it count from
+ * the start of its day; exact timestamps still count up to `asOf` itself.
+ * Only for entry dates — deadlines (`dueAt`) stay on the exact instant.
+ */
+export function entryCutoff(asOf: Date): Date {
+  const todayStamp = orgDateFromInput(orgIsoDate(asOf));
+  return asOf > todayStamp ? asOf : todayStamp;
+}
+
 /** The Houston calendar date of an instant, as "YYYY-MM-DD" for a date input. */
 export function orgIsoDate(date: Date): string {
   const parts = new Intl.DateTimeFormat('en-CA', {

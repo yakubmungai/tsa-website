@@ -7,7 +7,7 @@ import { writeAudit } from '@/lib/audit';
 import { defineAction, actionError } from '@/lib/action';
 import { now } from '@/lib/clock';
 import { formatUSD } from '@/lib/money';
-import { orgDateFromInput } from '@/lib/finance/dates';
+import { orgDateFromInput, orgIsoDate } from '@/lib/finance/dates';
 import {
   adminRecordPaymentSchema,
   bankAssignSchema,
@@ -108,6 +108,7 @@ export const recordMemberPayment = defineAction({
   async handler(input, ctx): Promise<{ paymentId: string }> {
     const member = await db.member.findUnique({ where: { id: input.memberId }, select: { id: true, names: true, archivedAt: true } });
     if (!member || member.archivedAt) actionError('Member not found.');
+    if (input.paidOn > orgIsoDate(await now())) actionError('The date cannot be in the future.');
     const created = await db.payment.create({
       data: {
         memberId: member.id,

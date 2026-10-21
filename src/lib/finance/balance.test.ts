@@ -249,6 +249,13 @@ describe('computeStanding — as of a date', () => {
     expect(computeStanding({ entries, joinedAt: null, asOf: eventDate }).tier).toBe('REDUCED');
     expect(computeStanding({ entries, joinedAt: null, asOf: NOW }).tier).toBe('FULL');
   });
+
+  it('counts a payment dated today in the morning, before its noon stamp', () => {
+    const morning = new Date('2026-09-01T14:00:00Z'); // 09:00 Houston
+    const today = new Date('2026-09-01T18:00:00Z'); // how a typed "2026-09-01" is stored
+    const entries = [...fullyPaid, entry('ADVANCE_DEPOSIT', 50, today)];
+    expect(computeStanding({ entries, joinedAt: null, asOf: morning }).advanceCents).toBe(15_000);
+  });
 });
 
 describe('computeStanding — payouts', () => {

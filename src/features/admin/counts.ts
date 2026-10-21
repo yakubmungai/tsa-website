@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { now } from '@/lib/clock';
 import { LEVY_ACCOUNTS } from '@/lib/finance/ledger';
 import { MISSED_CONTRIBUTIONS_BOARD_REFERRAL } from '@/lib/finance/constants';
+import { entryCutoff } from '@/lib/finance/dates';
 
 export interface AdminCounts {
   /** Cases waiting for the Katibu/Muhakiki to review. */
@@ -40,7 +41,7 @@ export async function overdueByMember(asOf: Date): Promise<Map<string, number>> 
       assessmentId: { in: overdue.map((a) => a.id) },
       account: { in: LEVY_ACCOUNTS },
       voidedAt: null,
-      occurredAt: { lte: asOf },
+      occurredAt: { lte: entryCutoff(asOf) },
     },
     _sum: { amountCents: true },
   });

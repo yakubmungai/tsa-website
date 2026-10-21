@@ -3,7 +3,8 @@ import { Prisma, type LedgerAccount, type LedgerEntry, type LedgerEntryKind } fr
 import { db } from '@/lib/db';
 import { now } from '@/lib/clock';
 import { computeStanding, duesYearFor, type MemberStanding } from './balance';
-import { orgIsoDate } from './dates';
+import { entryCutoff, orgMonthKey } from './dates';
+import { monthStart as levyMonthStart } from './levy';
 
 /**
  * The only code that writes to the ledger.
@@ -129,9 +130,10 @@ export function outstandingFrom(
   entries: { account: string; amountCents: number; occurredAt: Date; voidedAt: Date | null }[],
   asOf: Date
 ) {
+  const cutoff = entryCutoff(asOf);
   const levy = entries
     .filter(
-      (e) => e.voidedAt === null && e.occurredAt <= asOf && LEVY_ACCOUNTS.includes(e.account as LedgerAccount)
+      (e) => e.voidedAt === null && e.occurredAt <= cutoff && LEVY_ACCOUNTS.includes(e.account as LedgerAccount)
     )
     .reduce((total, e) => total + e.amountCents, 0);
   return Math.max(0, -levy);
@@ -198,7 +200,9 @@ export async function recomputeBalances(tx: Tx, memberIds: string[]): Promise<vo
  */
 export async function refreshStaleBalances(): Promise<void> {
   const asOf = await now();
-  const monthStart = new Date(`${orgIsoDate(asOf).slice(0, 7)}-01T00:00:00.000Z`);
+  // The same instant deferred shares are charged at (levy.monthStart), so a
+  // cache rebuilt on the 1st before that charge still counts as stale.
+  const monthStart = levyMonthStart(orgMonthKey(asOf));
   const stale = await db.memberBalance.findMany({
     where: { recomputedAt: { lt: monthStart } },
     select: { memberId: true },
@@ -259,7 +263,7 @@ export async function countMissedContributions(memberId: string, asOf: Date): Pr
       assessmentId: { in: overdue.map((a) => a.id) },
       account: { in: LEVY_ACCOUNTS },
       voidedAt: null,
-      occurredAt: { lte: asOf },
+      occurredAt: { lte: entryCutoff(asOf) },
     },
     _sum: { amountCents: true },
   });

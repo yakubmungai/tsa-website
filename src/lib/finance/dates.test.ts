@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { daysBetween, isIsoDate, nextMonthKey, orgDateFromInput, orgIsoDate, orgMonthKey } from './dates';
+import { daysBetween, entryCutoff, isIsoDate, nextMonthKey, orgDateFromInput, orgIsoDate, orgMonthKey } from './dates';
 
 describe('org dates', () => {
   it('keeps a typed date on the same Houston day in both seasons', () => {
@@ -25,5 +25,21 @@ describe('org dates', () => {
 
   it('counts whole days', () => {
     expect(daysBetween(new Date('2026-09-01T00:00:00Z'), new Date('2026-09-15T12:00:00Z'))).toBe(14);
+  });
+
+  it('counts entries typed for today from the start of the Houston day', () => {
+    // 09:00 Houston: today's typed date (18:00Z) is later than now, but counts.
+    expect(entryCutoff(new Date('2026-01-15T15:00:00Z')).toISOString()).toBe('2026-01-15T18:00:00.000Z'); // CST
+    expect(entryCutoff(new Date('2026-07-15T14:00:00Z')).toISOString()).toBe('2026-07-15T18:00:00.000Z'); // CDT
+    // Tomorrow's typed date still does not count.
+    expect(orgDateFromInput('2026-07-16') > entryCutoff(new Date('2026-07-15T14:00:00Z'))).toBe(true);
+  });
+
+  it('is just now once the day’s stamp has passed', () => {
+    const evening = new Date('2026-07-15T23:00:00Z');
+    expect(entryCutoff(evening)).toEqual(evening);
+    // 23:30 Houston on the 15th is 04:30Z on the 16th — still the 15th's stamp rules.
+    const lateNight = new Date('2026-07-16T04:30:00Z');
+    expect(entryCutoff(lateNight)).toEqual(lateNight);
   });
 });

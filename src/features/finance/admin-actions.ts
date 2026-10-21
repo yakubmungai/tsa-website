@@ -8,7 +8,8 @@ import { defineAction, actionError } from '@/lib/action';
 import { formatUSD } from '@/lib/money';
 import { postLedgerEntrySchema, reverseLedgerEntrySchema } from '@/lib/validations';
 import { LedgerError, postEntry, recomputeBalance, reverseEntry } from '@/lib/finance/ledger';
-import { orgDateFromInput } from '@/lib/finance/dates';
+import { orgDateFromInput, orgIsoDate } from '@/lib/finance/dates';
+import { now } from '@/lib/clock';
 
 /**
  * Money an officer records by hand: a payment received, a refund, a charge.
@@ -27,6 +28,7 @@ export const postLedgerEntry = defineAction({
     });
     if (!member) actionError('Member not found.');
     if (member.archivedAt) actionError('Cannot post to an archived member.');
+    if (input.paidOn > orgIsoDate(await now())) actionError('The date cannot be in the future.');
 
     const amountCents = input.direction === 'IN' ? input.amount : -input.amount;
     const occurredAt = orgDateFromInput(input.paidOn);

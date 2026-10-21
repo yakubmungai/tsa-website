@@ -16,7 +16,7 @@ import {
   type CapBucket,
   type ExistingShare,
 } from '@/lib/finance/levy';
-import { orgDateFromInput, orgMonthKey } from '@/lib/finance/dates';
+import { entryCutoff, orgDateFromInput, orgMonthKey } from '@/lib/finance/dates';
 import type { FileClaimInput } from '@/lib/validations';
 
 type Tx = Prisma.TransactionClient;
@@ -328,11 +328,12 @@ export async function loadShares(
     list.push(e);
     byAssessment.set(e.assessmentId!, list);
   }
+  const cutoff = entryCutoff(asOf);
   return rows.map((r) => {
     const mine = byAssessment.get(r.id) ?? [];
     const levy = mine.filter((e) => LEVY_ACCOUNTS.includes(e.account));
-    const charged = levy.some((e) => e.entryKind === 'CHARGE' && e.occurredAt <= asOf);
-    const balance = levy.filter((e) => e.occurredAt <= asOf).reduce((s, e) => s + e.amountCents, 0);
+    const charged = levy.some((e) => e.entryKind === 'CHARGE' && e.occurredAt <= cutoff);
+    const balance = levy.filter((e) => e.occurredAt <= cutoff).reduce((s, e) => s + e.amountCents, 0);
     const credits = levy.filter((e) => e.amountCents > 0);
     const fromAdvanceCents = credits
       .filter((e) => e.idempotencyKey?.endsWith(':advance-in'))

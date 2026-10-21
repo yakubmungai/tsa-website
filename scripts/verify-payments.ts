@@ -14,13 +14,14 @@
  *  - confirming twice posts nothing twice
  *  - an unreported deposit is suggested to the right member
  *  - a pay link resolves, and a made-up one does not
+ *  - a payment dated today counts in the morning, not only after noon
  */
 import { PrismaClient } from '@prisma/client';
 import { clearAllData, seedDemoData } from '../src/features/demo/seed';
 import { announceClaim, createClaimRow, loadShares, reviewClaim } from '../src/features/claims/service';
 import { confirmPaymentTx, importBankStatement, mintPayLink, rematchBank, resolvePayLink } from '../src/features/payments/service';
 import { getMemberStanding } from '../src/lib/finance/ledger';
-import { addDays, orgIsoDate } from '../src/lib/finance/dates';
+import { addDays, orgDateFromInput, orgIsoDate } from '../src/lib/finance/dates';
 import { formatUSD } from '../src/lib/money';
 
 const db = new PrismaClient();
@@ -118,6 +119,27 @@ async function main() {
   check('confirming twice posts nothing twice', (await db.ledgerEntry.count({ where: { paymentId: reported.id } })) === entriesBefore);
 
   await rematchBank();
+
+  // ── Same morning ─────────────────────────────────────────────────────────
+  // A typed date is stored at noon Central; it must count from the start of its day.
+  console.log('\nSame morning');
+  const morning = new Date(`${orgIsoDate(today)}T14:00:00Z`); // 08:00/09:00 Houston
+  const graceBefore = await getMemberStanding(grace.id, { asOf: morning });
+  const cash = await db.payment.create({
+    data: {
+      memberId: grace.id,
+      method: 'CASH',
+      amountCents: 1500,
+      paidOn: orgDateFromInput(orgIsoDate(today)),
+      payerName: 'Grace Ndosi',
+      source: 'admin',
+      preference: 'ADVANCE',
+    },
+  });
+  await db.$transaction((tx) => confirmPaymentTx(tx, cash.id, null));
+  const graceAfter = await getMemberStanding(grace.id, { asOf: morning });
+  check('a payment dated today counts in the morning', graceAfter.advanceCents === graceBefore.advanceCents + 1500,
+    `${formatUSD(graceBefore.advanceCents)} → ${formatUSD(graceAfter.advanceCents)}`);
 
   // ── Pay link ─────────────────────────────────────────────────────────────
   console.log('\nPay link');
