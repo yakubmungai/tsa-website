@@ -1,69 +1,76 @@
+import Link from 'next/link';
+import { Mail, Phone, Smartphone, UserPlus } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { Phone, Mail, ShieldAlert } from 'lucide-react';
-import Link from 'next/link';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { getPortalStrings } from '@/lib/i18n';
 
 /**
- * Self-service account activation is disabled until the phone-verification flow
- * replaces it. The previous version let a visitor claim any member's profile and
- * financial ledger by knowing their phone number.
- *
- * Until then, TSA leaders set up member accounts directly.
+ * There is no sign-up form. A member on the roster activates their account by
+ * signing in with their phone (src/features/auth/otp-actions.ts); anyone else
+ * applies for membership first. This page explains both, for old links and
+ * for people who look for a "sign up" button.
  */
-export default function SignupPage() {
+export default async function SignupPage() {
+  const t = (await getPortalStrings()).signup;
+
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50">
+    <div className="flex flex-col min-h-screen bg-background">
       <Navbar />
 
       <main className="flex-grow flex items-center justify-center pt-32 pb-16 px-4">
-        <Card className="w-full max-w-md shadow-xl border-t-4 border-t-amber-500 bg-white">
-          <CardHeader className="space-y-2 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-50">
-              <ShieldAlert className="h-6 w-6 text-amber-600" />
-            </div>
-            <CardTitle className="text-2xl font-bold tracking-tight text-slate-900">
-              Uwezeshaji wa Akaunti
+        <Card className="w-full max-w-md overflow-hidden rounded-3xl border border-border/60 border-t-4 border-t-primary bg-card shadow-sm">
+          <CardHeader className="space-y-1 text-center">
+            <CardTitle className="font-serif text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+              {t.title}
             </CardTitle>
-            <CardDescription className="text-slate-500">Account Activation</CardDescription>
+            <CardDescription className="text-base text-muted-foreground">{t.subtitle}</CardDescription>
           </CardHeader>
 
-          <CardContent className="space-y-5 text-slate-700">
-            <p className="text-base leading-relaxed">
-              Kwa sasa, akaunti za wanachama zinawezeshwa na viongozi wa TSA. Tafadhali
-              wasiliana na kiongozi ili upewe akaunti yako.
-            </p>
-            <p className="text-base leading-relaxed text-slate-600">
-              Member accounts are currently set up by TSA leaders. Please contact a leader
-              to have your account activated.
-            </p>
-
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
-              <a
-                href="tel:+12066020506"
-                className="flex items-center gap-3 text-base font-semibold text-emerald-700 hover:text-emerald-800"
+          <CardContent className="space-y-6">
+            <section className="space-y-3">
+              <h2 className="flex items-center gap-2 text-lg font-bold text-foreground">
+                <Smartphone className="h-5 w-5 text-primary" aria-hidden />
+                {t.memberTitle}
+              </h2>
+              <p className="text-base text-muted-foreground">{t.memberBody}</p>
+              <Link
+                href="/login"
+                className="btn-shimmer inline-flex min-h-12 w-full items-center justify-center rounded-2xl px-6 text-base font-bold text-primary-foreground"
               >
-                <Phone className="h-5 w-5 shrink-0" />
+                {t.memberButton}
+              </Link>
+            </section>
+
+            <section className="space-y-3 border-t border-border/60 pt-6">
+              <h2 className="flex items-center gap-2 text-lg font-bold text-foreground">
+                <UserPlus className="h-5 w-5 text-primary" aria-hidden />
+                {t.joinTitle}
+              </h2>
+              <p className="text-base text-muted-foreground">{t.joinBody}</p>
+              <Link
+                href="/membership"
+                className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl border-2 border-primary px-6 text-base font-bold text-primary hover:bg-primary/5"
+              >
+                {t.joinButton}
+              </Link>
+            </section>
+
+            <section className="space-y-2 rounded-2xl bg-muted/50 p-4">
+              <h2 className="text-base font-bold text-foreground">{t.helpTitle}</h2>
+              <p className="text-base text-muted-foreground">{t.helpBody}</p>
+              <a href="tel:+12066020506" className="flex items-center gap-3 text-base font-semibold text-primary hover:underline">
+                <Phone className="h-5 w-5 shrink-0" aria-hidden />
                 (206) 602-0506
               </a>
               <a
                 href="mailto:tansha.hq@gmail.com"
-                className="flex items-center gap-3 text-base font-semibold text-emerald-700 hover:text-emerald-800 break-all"
+                className="flex items-center gap-3 break-all text-base font-semibold text-primary hover:underline"
               >
-                <Mail className="h-5 w-5 shrink-0" />
+                <Mail className="h-5 w-5 shrink-0" aria-hidden />
                 tansha.hq@gmail.com
               </a>
-            </div>
-
-            <p className="text-sm text-slate-600">
-              Bado si mwanachama?{' '}
-              <Link
-                href="/membership"
-                className="text-emerald-600 hover:text-emerald-700 font-semibold underline"
-              >
-                Jiunge na TSA / Apply for membership
-              </Link>
-            </p>
+            </section>
           </CardContent>
         </Card>
       </main>

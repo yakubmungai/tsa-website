@@ -13,6 +13,7 @@ export interface TranslationSchema {
     switchTo: string;
     dashboard: string;
     logout: string;
+    login: string;
   };
   hero: {
     badge: string;
@@ -305,6 +306,7 @@ export const translations: Record<Language, TranslationSchema> = {
       switchTo: "SW",
       dashboard: "My account",
       logout: "Sign out",
+      login: "Sign in",
     },
     hero: {
       badge: "Tanzanian Diaspora Mutual-Aid Society",
@@ -658,6 +660,7 @@ export const translations: Record<Language, TranslationSchema> = {
       switchTo: "EN",
       dashboard: "Akaunti yangu",
       logout: "Toka",
+      login: "Ingia",
     },
     hero: {
       badge: "Jumuiya ya Kusaidiana ya Watanzania Marekani",

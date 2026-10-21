@@ -105,7 +105,7 @@ export function Navbar() {
             </>
           ) : (
             <Button asChild className="btn-shimmer text-primary-foreground border-0 text-xs font-semibold">
-              <a href="/login">Login / Signup</a>
+              <a href="/login">{t.login}</a>
             </Button>
           )}
         </div>
@@ -157,7 +157,7 @@ export function Navbar() {
             ) : (
               <Button asChild className="mt-2 w-full btn-shimmer text-primary-foreground border-0 text-sm font-semibold">
                 <a href="/login" onClick={() => setMobileOpen(false)}>
-                  Login / Signup
+                  {t.login}
                 </a>
               </Button>
             )}

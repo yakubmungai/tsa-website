@@ -464,6 +464,19 @@ const sw = {
     member: 'Mwanachama',
     recent: 'Yaliyothibitishwa karibuni',
   },
+  signup: {
+    title: 'Kuingia kwenye akaunti yako',
+    subtitle: 'Hakuna fomu ya kujaza ili kufungua akaunti.',
+    memberTitle: 'Tayari ni mwanachama wa TSA?',
+    memberBody:
+      'Ingia kwa namba ya simu uliyoisajili TSA. Tutakutumia namba ya uthibitisho, na akaunti yako itafunguka yenyewe mara ya kwanza.',
+    memberButton: 'Ingia kwa namba ya simu',
+    joinTitle: 'Bado si mwanachama?',
+    joinBody: 'Jaza fomu ya uanachama. Viongozi wakishaikubali, utaweza kuingia kwa namba yako ya simu.',
+    joinButton: 'Omba uanachama',
+    helpTitle: 'Unahitaji msaada?',
+    helpBody: 'Kama namba yako haitambuliki, wasiliana na kiongozi wa TSA.',
+  },
   login: {
     phoneLabel: 'Namba yako ya simu',
     phoneHelp: 'Tutakutumia namba ya uthibitisho.',
@@ -1364,6 +1377,19 @@ const en: PortalStrings = {
     recordHelp: 'Cash at a meeting or a check: recorded and confirmed at once.',
     member: 'Member',
     recent: 'Recently confirmed',
+  },
+  signup: {
+    title: 'Getting into your account',
+    subtitle: 'There is no form to fill in to open an account.',
+    memberTitle: 'Already a TSA member?',
+    memberBody:
+      'Sign in with the phone number TSA has on record. We will send you a code, and your account sets itself up the first time.',
+    memberButton: 'Sign in with your phone',
+    joinTitle: 'Not a member yet?',
+    joinBody: 'Fill in the membership form. Once the leaders approve it, you can sign in with your phone number.',
+    joinButton: 'Apply for membership',
+    helpTitle: 'Need help?',
+    helpBody: 'If your number is not recognised, contact a TSA leader.',
   },
   login: {
     phoneLabel: 'Your phone number',
