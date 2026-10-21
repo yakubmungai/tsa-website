@@ -1,6 +1,6 @@
 import { ShieldCheck, UserRound } from 'lucide-react';
 import { db } from '@/lib/db';
-import { requireMember } from '@/lib/session';
+import { requireOwnAccount } from '@/lib/session';
 import { getPortalStrings } from '@/lib/i18n';
 import { formatPhone } from '@/lib/phone';
 import { AddHelperForm } from '@/components/add-helper-form';
@@ -13,7 +13,7 @@ import { EmptyState } from '@/components/portal/empty-state';
 import { HelpButton } from '@/components/portal/help-button';
 
 export default async function PortalAccessPage() {
-  const ctx = await requireMember();
+  const ctx = await requireOwnAccount();
   const t = await getPortalStrings();
 
   const delegations = await db.delegation.findMany({

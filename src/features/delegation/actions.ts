@@ -24,7 +24,8 @@ import { consume, POLICIES } from '@/lib/rate-limit';
  *  - self-service: the member grants access and approves with a code sent to
  *    their own phone
  *  - admin-provisioned: an officer sets it up and must record how the member
- *    authorised it. The member is notified either way.
+ *    authorised it. Either way the member sees every grant on their Helpers
+ *    page and can revoke it there.
  */
 
 const PERMISSIONS = [
@@ -43,6 +44,14 @@ function monthsFromNow(months: number): Date {
   return date;
 }
 
+/** Choosing helpers is the member's own decision, never a helper's. */
+async function refuseWhileActing(): Promise<void> {
+  const eff = await getEffectiveContext();
+  if (eff?.isActing) {
+    actionError('Only the member can choose their helpers. Switch back to your own account first.');
+  }
+}
+
 /** A member grants someone access to their own account. */
 export const requestDelegation = defineAction({
   name: 'requestDelegation',
@@ -56,6 +65,7 @@ export const requestDelegation = defineAction({
     })
     .strict(),
   async handler(input, ctx): Promise<{ delegationId: string; codeVisible: boolean; demoCode?: string }> {
+    await refuseWhileActing();
     const owner = await db.member.findUnique({
       where: { id: ctx.memberId ?? '' },
       select: { id: true, names: true, phoneE164: true, archivedAt: true },
@@ -136,6 +146,7 @@ export const approveDelegation = defineAction({
   guard: 'auth',
   schema: z.object({ delegationId: z.string().uuid(), code: otpCodeSchema }).strict(),
   async handler(input, ctx): Promise<{ delegationId: string }> {
+    await refuseWhileActing();
     const delegation = await db.delegation.findUnique({
       where: { id: input.delegationId },
       include: { ownerMember: { select: { id: true, names: true, phoneE164: true } } },
@@ -383,21 +394,6 @@ export const revokeDelegation = defineAction({
     return { delegationId: delegation.id };
   },
 });
-
-/**
- * Link pending invitations to the signed-in user by phone number.
- *
- * Called after sign-in: a grant is created against a phone number before that
- * person has an account, so it is bound to their user record the first time
- * they appear.
- */
-export async function linkPendingDelegations(userId: string, phoneE164: string): Promise<number> {
-  const { count } = await db.delegation.updateMany({
-    where: { delegatePhoneE164: phoneE164, delegateUserId: null, status: { in: ['ACTIVE'] } },
-    data: { delegateUserId: userId },
-  });
-  return count;
-}
 
 /** Grants this user holds over other members' accounts. */
 export async function getMyDelegations() {

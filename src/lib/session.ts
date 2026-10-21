@@ -132,6 +132,16 @@ export async function requireMember(): Promise<EffectiveContext & { memberId: st
 }
 
 /**
+ * Require the member's own account, not one they are acting for. Choosing who
+ * may help a member is theirs alone — no grant lets a helper do it.
+ */
+export async function requireOwnAccount(): Promise<EffectiveContext & { memberId: string }> {
+  const ctx = await requireMember();
+  if (ctx.isActing) redirect('/portal?denied=permission');
+  return ctx;
+}
+
+/**
  * Require a specific permission on the effective member.
  *
  * Acting on your own account implies every permission. Acting for someone else
