@@ -85,7 +85,7 @@ interface WriteAuditInput {
  * Hash the caller's IP with a server-side pepper, so the audit log records
  * "same person" without itself becoming a store of personal data.
  */
-async function getIpHash(): Promise<string | null> {
+export async function getIpHash(): Promise<string | null> {
   try {
     const h = await headers();
     const ip = h.get('x-forwarded-for')?.split(',')[0]?.trim() ?? h.get('x-real-ip');

@@ -22,9 +22,8 @@ async function requestIpHash(): Promise<string | null> {
 
 export async function submitMembership(formData: FormData) {
   try {
-    if (!process.env.RESEND_API_KEY) {
-      throw new Error('Resend API key is not configured');
-    }
+    // No email key is fine: the application is saved and shows in the forms
+    // queue either way (recordSubmission notes the email was not sent).
     const getString = (key: string) => formData.get(key) as string || 'N/A';
     const getArray = (key: string) => {
       const val = formData.get(key);

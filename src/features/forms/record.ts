@@ -1,8 +1,8 @@
 import 'server-only';
 import { randomInt } from 'node:crypto';
-import { Resend } from 'resend';
 import type { Prisma } from '@prisma/client';
 import { db } from '@/lib/db';
+import { officerMail } from '@/lib/notify';
 import { toE164 } from '@/lib/phone';
 import { consumeAll, POLICIES } from '@/lib/rate-limit';
 
@@ -91,14 +91,13 @@ export async function recordSubmission<T>(
   }
 
   // 2. Notify. Best effort — the record already exists either way.
-  const apiKey = process.env.RESEND_API_KEY;
-  if (apiKey) {
+  const mail = officerMail();
+  if (mail) {
     try {
-      const resend = new Resend(apiKey);
-      const { error } = await resend.emails.send({
+      const { error } = await mail.resend.emails.send({
         from: 'TSA Website <website@mail.tansha.org>',
-        to: [process.env.ADMIN_EMAIL || 'tansha.hq@gmail.com'],
-        subject: `${input.email.subject} [${submission.reference}]`,
+        to: [mail.to],
+        subject: `${mail.subjectPrefix}${input.email.subject} [${submission.reference}]`,
         html: input.email.html,
         attachments: input.email.attachments,
       });
@@ -121,7 +120,7 @@ export async function recordSubmission<T>(
   } else {
     await db.formSubmission.update({
       where: { id: submission.id },
-      data: { emailError: 'RESEND_API_KEY not configured' },
+      data: { emailError: 'Officer email not configured' },
     });
   }
 

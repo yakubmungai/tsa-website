@@ -114,9 +114,9 @@ export const submitDemoFeedback = defineAction({
 /**
  * Send a tester's note to whoever is running the trial.
  *
- * Deliberately separate from every other email on the test site: those are
- * switched off there so test forms never reach the officers, while these notes
- * should reach one chosen inbox. Both settings exist only on the test
+ * Deliberately separate from the officer emails, which the test site sends
+ * only to DEMO_OFFICER_EMAIL (src/lib/notify.ts) so test forms never reach the
+ * real officers. These notes reach one chosen inbox. Both settings exist only on the test
  * deployment — DEMO_FEEDBACK_EMAIL (where) and DEMO_FEEDBACK_RESEND_API_KEY
  * (the sending key). Best effort: the note is saved either way.
  */
