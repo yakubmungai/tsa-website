@@ -52,13 +52,14 @@ forgeable, including admin sessions.
 | `npm run typecheck` | `tsc --noEmit` — must be clean; build errors are **not** suppressed |
 | `npm test` | Vitest unit tests |
 | `npm run lint` | ESLint, then `lint:ui` (fails on raw palette colours in the portal/admin) |
+| `npm run check` | `typecheck`, `lint` and `test` in one go: run before every push |
 | `npm run seed:demo` | **Test environment only.** Wipes and reseeds the demo roster and scenarios |
 | `npm run migrate:ledger` | Legacy `Transaction` → ledger. Dry run; `-- --commit` to write |
 | `npm run verify:ledger` | Cached balances vs raw ledger — exits non-zero on drift |
 | `npm run verify:claims` | **Test environment only.** Walks cases through the engine (20 checks) |
-| `npm run verify:payments` | **Test environment only.** Report → bank match → confirm (15 checks) |
+| `npm run verify:payments` | **Test environment only.** Report → bank match → confirm (16 checks) |
 
-Run `typecheck`, `test` and `build` before pushing. There is no CI yet.
+Run `npm run check` and `npm run build` before pushing. There is no CI yet.
 
 ---
 
@@ -206,8 +207,12 @@ Neon PostgreSQL, managed with **Prisma Migrate**.
 ```bash
 npx prisma migrate dev --name what_changed --create-only   # write the migration
 # read the generated SQL by hand and confirm it contains no unintended DROP
-npx prisma migrate deploy                                   # apply it
+DATABASE_URL="$DIRECT_URL" npx prisma migrate deploy       # apply it, over the direct connection
 ```
+
+Migrations always go over Neon's **direct** connection (the host without
+`-pooler`); DDL through the pooler is unreliable. The app itself keeps using the
+pooled `DATABASE_URL`.
 
 **Never run `prisma db push`.** It cannot express the constraints and triggers
 this schema relies on, and running it against a database holding member money
@@ -220,8 +225,9 @@ database it is pointed at. Apply migrations as an explicit release step.
 ### Environments
 `DATABASE_URL` must be set **separately per environment**. Sharing one database
 between Production and Preview means every preview deploy and every local command
-writes to live member data. `ADMIN_EMAIL` in preview must be a developer address,
-never the officers' inbox, so test submissions never reach real people.
+writes to live member data. On the test site (`DEMO_MODE=true`) officer emails
+go only to `DEMO_OFFICER_EMAIL`, never `ADMIN_EMAIL`, so test submissions never
+reach real people.
 
 ---
 
@@ -265,8 +271,8 @@ The portal, cases and payments are built and tested, but the production
 database has not been touched. In order:
 
 1. **Back up** production (see below).
-2. `npx prisma migrate deploy` against production. Every migration since the
-   ledger is additive (new tables only).
+2. `DATABASE_URL="$DIRECT_URL" npx prisma migrate deploy` against production's
+   direct connection. Every migration since the ledger is additive (new tables only).
 3. `npm run migrate:ledger`: a dry run that prints what it would post. Then
    `npm run migrate:ledger -- --commit`. Each member's ledger must equal their
    legacy totals to the cent, or that member is rolled back.
@@ -285,6 +291,20 @@ database has not been touched. In order:
      production branch's compute to never suspend.
    - Confirm the Neon project really is in `us-west-2` (it is today), so the
      `pdx1` region in `vercel.json` sits next to it.
+
+### Production settings (Vercel → Production)
+
+| Setting | Value |
+|---|---|
+| `NEXTAUTH_SECRET` | A new random secret, different from staging |
+| `NEXTAUTH_URL`, `NEXT_PUBLIC_SITE_URL` | `https://tansha.org` |
+| `DATABASE_URL` | Production's **pooled** Neon connection |
+| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_VERIFY_SERVICE_SID` | Required: without Twilio, phone sign-in refuses to run on tansha.org |
+| `RESEND_API_KEY`, `ADMIN_EMAIL` | Officers' inbox for cases, payments and forms |
+| `AUDIT_IP_PEPPER` | Required: a random secret, so stored IP hashes cannot be reversed |
+| `DEMO_MODE`, `DEMO_OFFICER_EMAIL`, `DEMO_FEEDBACK_*` | **Unset** |
+| `ROSTER_CONFIRMED` | Only after the leaders' sign-off (step 5) |
+| `STRIPE_*` | Unset until TSA's Stripe account exists |
 
 ### Turning on card payments
 
@@ -316,7 +336,7 @@ data before it is opened to members.
    NEXT_PUBLIC_SITE_URL=https://<your-staging-host>
    DATABASE_URL=<the separate database>
    NEXTAUTH_SECRET=<a different secret from production>
-   ADMIN_EMAIL=<a developer address, never tansha.hq@gmail.com>
+   DEMO_OFFICER_EMAIL=<test inbox; officer emails go here, marked [TEST]>
    ROSTER_CONFIRMED=true        # so testers see green/amber/red and benefits
    # Optional, to test card payments: Stripe TEST keys + STRIPE_ENABLED=true
    ```
