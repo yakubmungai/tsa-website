@@ -33,7 +33,11 @@ export function Footer() {
           description: t.contact.successText,
         })
       } else {
-        throw new Error(result.error)
+        toast({
+          title: language === "en" ? "Error" : "Hitilafu",
+          description: result.error,
+          variant: "destructive",
+        })
       }
     } catch (error) {
       toast({

@@ -23,8 +23,7 @@ import { toast } from 'sonner';
 import { submitMembership } from '@/features/membership/actions';
 import { useLanguage } from '@/components/language-context';
 import { AlertCircle, FileText, CheckCircle2, ShieldAlert, Plus, Trash2 } from 'lucide-react';
-
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+import { MAX_RAW_IMAGE_BYTES, MAX_UPLOAD_BYTES, shrinkImage } from '@/lib/upload';
 
 const translations = {
   en: {
@@ -178,7 +177,16 @@ const formSchema = z.object({
   agreementDate: z.string().min(1, "Required"),
   idFile: z.any()
     .refine((files) => files?.length === 1, "ID Upload is required")
-    .refine((files) => files?.[0]?.size <= MAX_FILE_SIZE, "Max file size is 10MB"),
+    // Images are shrunk before upload; anything else goes as-is, and the host
+    // rejects request bodies over 4.5MB.
+    .refine(
+      (files) => {
+        const f = files?.[0];
+        if (!f) return false;
+        return f.size <= (f.type.startsWith('image/') ? MAX_RAW_IMAGE_BYTES : MAX_UPLOAD_BYTES);
+      },
+      "File too large. PDFs must be under 4MB — or upload a photo of your ID instead."
+    ),
 });
 
 export default function MembershipPage() {
@@ -247,12 +255,23 @@ export default function MembershipPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
+    let serverError: string | undefined;
     try {
+      const idFile = values.idFile?.[0] ? await shrinkImage(values.idFile[0]) : null;
+      if (idFile && idFile.size > MAX_UPLOAD_BYTES) {
+        form.setError('idFile', {
+          message: lang === 'en'
+            ? "This file is too large to send (max 4MB). Please take a smaller photo of your ID or a screenshot."
+            : "Faili hili ni kubwa mno (kikomo 4MB). Tafadhali piga picha ndogo ya kitambulisho au screenshot.",
+        });
+        return;
+      }
+
       const formData = new FormData();
       Object.entries(values).forEach(([key, value]) => {
         if (key === 'idFile') {
-          if (value && value[0]) {
-            formData.append(key, value[0]);
+          if (idFile) {
+            formData.append(key, idFile);
           }
         } else if (Array.isArray(value)) {
           formData.append(key, JSON.stringify(value));
@@ -263,12 +282,16 @@ export default function MembershipPage() {
 
       const result = await submitMembership(formData);
 
-      if (!result.success) throw new Error(result.error);
+      if (!result.success) {
+        serverError = result.error;
+        throw new Error(result.error);
+      }
 
       toast.success(lang === 'en' ? "Application submitted successfully!" : "Maombi yametumwa kwa mafanikio!");
       form.reset();
     } catch (error) {
-      toast.error(lang === 'en' ? "Submission failed. Please check your connection." : "Imeshindikana kutuma. Tafadhali jaribu tena.");
+      // Only blame the connection when the server never answered.
+      toast.error(serverError ?? (lang === 'en' ? "Submission failed. Please check your connection and try again." : "Imeshindikana kutuma. Tafadhali jaribu tena."), { duration: 12000 });
     } finally {
       setIsSubmitting(false);
     }
@@ -943,7 +966,7 @@ export default function MembershipPage() {
                               >
                                 <CheckCircle2 className="h-10 w-10 mb-2 opacity-50 group-hover:opacity-100" />
                                 <span className="font-semibold text-lg">{t.fileSelect}</span>
-                                <span className="text-xs">Max 10MB (JPG, PNG, PDF)</span>
+                                <span className="text-xs">{lang === 'en' ? 'Photo (JPG, PNG) or PDF under 4MB' : 'Picha (JPG, PNG) au PDF chini ya 4MB'}</span>
                                 {value && value[0] && (
                                   <span className="mt-2 text-sm text-primary font-bold bg-primary/10 px-3 py-1 rounded-full animate-in zoom-in-95">
                                     ✓ {value[0].name}
