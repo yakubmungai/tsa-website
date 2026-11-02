@@ -35,7 +35,7 @@ export async function submitContactMessage(formData: FormData) {
     const mail = officerMail();
     if (!mail) {
       console.error('[contact] officer email not configured');
-      return { success: false, error: 'Email service not configured' };
+      return { success: false, error: 'Messages cannot be sent right now. Please call or email a TSA leader directly.' };
     }
 
     const { error } = await mail.resend.emails.send({
@@ -69,11 +69,11 @@ export async function submitContactMessage(formData: FormData) {
 
     if (error) {
       console.error('[contact] send failed', error.message);
-      return { success: false, error: error.message };
+      return { success: false, error: 'Your message could not be sent. Please try again later.' };
     }
     return { success: true };
   } catch (err) {
     console.error('[contact] unexpected error', err);
-    return { success: false, error: 'Internal Server Error' };
+    return { success: false, error: 'Something went wrong on our side. Please try again, or contact a TSA leader if it keeps happening.' };
   }
 }

@@ -171,7 +171,7 @@ export async function submitMembership(formData: FormData) {
     return { success: true, reference: recorded.reference };
   } catch (err) {
     console.error('Submission Error:', err);
-    return { success: false, error: 'Internal Server Error' };
+    return { success: false, error: 'Something went wrong on our side. Please try again, or contact a TSA leader if it keeps happening.' };
   }
 }
 
@@ -249,7 +249,7 @@ export async function submitConstitution(values: Record<string, string | boolean
     return { success: true, reference: recorded.reference };
   } catch (err) {
     console.error('Submission Error:', err);
-    return { success: false, error: 'Internal Server Error' };
+    return { success: false, error: 'Something went wrong on our side. Please try again, or contact a TSA leader if it keeps happening.' };
   }
 }
 
@@ -353,6 +353,6 @@ export async function submitRenewal(formData: FormData) {
     return { success: true, reference: recorded.reference };
   } catch (err) {
     console.error('Renewal Submission Error:', err);
-    return { success: false, error: 'Internal Server Error' };
+    return { success: false, error: 'Something went wrong on our side. Please try again, or contact a TSA leader if it keeps happening.' };
   }
 }
