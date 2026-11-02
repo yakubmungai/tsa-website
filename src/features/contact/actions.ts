@@ -8,7 +8,7 @@ export async function submitContactMessage(formData: FormData) {
   try {
     if (!process.env.RESEND_API_KEY) {
       console.error('RESEND_API_KEY is missing');
-      return { success: false, error: 'Email service not configured' };
+      return { success: false, error: 'Messages cannot be sent right now. Please call or email a TSA leader directly.' };
     }
 
     const firstName = formData.get('firstName') as string || 'N/A';
@@ -50,13 +50,13 @@ export async function submitContactMessage(formData: FormData) {
 
     if (error) {
       console.error('Resend Error:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: 'Your message could not be sent. Please try again later.' };
     }
 
     console.log('Contact message sent successfully:', data?.id);
     return { success: true };
   } catch (err) {
     console.error('Contact Submission Unexpected Error:', err);
-    return { success: false, error: 'Internal Server Error' };
+    return { success: false, error: 'Something went wrong on our side. Please try again, or contact a TSA leader if it keeps happening.' };
   }
 }

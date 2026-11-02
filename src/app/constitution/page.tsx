@@ -118,12 +118,15 @@ export default function ConstitutionPage() {
     try {
       const result = await submitConstitution(values);
 
-      if (!result.success) throw new Error(result.error);
+      if (!result.success) {
+        toast.error(result.error, { duration: 12000 });
+        return;
+      }
 
       toast.success(lang === 'en' ? "Agreement signed successfully!" : "Makubaliano yamesainiwa kwa mafanikio!");
       form.reset();
     } catch (error) {
-      toast.error(lang === 'en' ? "Failed to submit." : "Imeshindikana kutuma.");
+      toast.error(lang === 'en' ? "Failed to submit. Please check your connection and try again." : "Imeshindikana kutuma. Tafadhali jaribu tena.");
     } finally {
       setIsSubmitting(false);
     }

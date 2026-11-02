@@ -131,7 +131,10 @@ export default function FuneralNoticePage() {
 
       const result = await submitFuneralNotice(formData);
 
-      if (!result.success) throw new Error(result.error);
+      if (!result.success) {
+        toast.error(result.error, { duration: 12000 });
+        return;
+      }
 
       toast.success(t.success);
       form.reset();
